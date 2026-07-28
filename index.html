@@ -19,9 +19,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .sidebar {
-            background-color: #1e1f20;
-        }
+        .sidebar { background-color: #1e1f20; }
         .user-msg {
             background-color: #282a2c;
             color: #e3e3e3;
@@ -41,12 +39,8 @@
             border-color: #a8c7fa;
             outline: none;
         }
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #131314;
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #131314; }
         ::-webkit-scrollbar-thumb {
             background: #282a2c;
             border-radius: 4px;
@@ -104,7 +98,7 @@
         <!-- TOP HEADER -->
         <header class="h-16 border-b border-[#282a2c] flex items-center justify-between px-6 bg-[#131314]/80 backdrop-blur">
             <div class="flex items-center space-x-2">
-                <span class="text-sm font-semibold text-gray-300">Gemini 2.5 Engine</span>
+                <span class="text-sm font-semibold text-gray-300">Gemini Engine</span>
                 <span class="px-2 py-0.5 text-[10px] bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Live</span>
             </div>
             <div class="text-xs text-gray-400">
@@ -161,14 +155,17 @@
                     userAuthToken = data.access_token;
                     document.getElementById("backendStatus").innerText = "Online";
                     document.getElementById("backendStatus").className = "text-green-400 font-semibold";
+                    return true;
                 } else {
                     document.getElementById("backendStatus").innerText = "Offline";
                     document.getElementById("backendStatus").className = "text-red-400 font-semibold";
+                    return false;
                 }
             } catch (err) {
                 document.getElementById("backendStatus").innerText = "Error";
                 document.getElementById("backendStatus").className = "text-red-400 font-semibold";
                 console.error(err);
+                return false;
             }
         }
 
@@ -192,6 +189,15 @@
             const inputField = document.getElementById("messageInput");
             const userMsg = inputField.value.trim();
             if (!userMsg) return;
+
+            // Idan babu token, nema yanzu kafin aikawa
+            if (!userAuthToken) {
+                const authed = await initializeAuth();
+                if (!authed) {
+                    alert("Akwai matsalar haɗawa da Backend!");
+                    return;
+                }
+            }
 
             inputField.value = "";
             const chatBox = document.getElementById("chatBox");
@@ -224,8 +230,7 @@
             const aiTextElement = aiDiv.querySelector("#aiResponseContainer");
 
             try {
-                // Gyaran URL: An ƙara /api/v2
-                const response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
+                let response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -237,12 +242,30 @@
                     })
                 });
 
+                // Idan token ya mutu (401), sake sabunta shi kuma a sake aikawa
+                if (response.status === 401) {
+                    const refreshed = await initializeAuth();
+                    if (refreshed) {
+                        response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${userAuthToken}`
+                            },
+                            body: JSON.stringify({
+                                message: userMsg,
+                                session_id: currentSessionId
+                            })
+                        });
+                    }
+                }
+
                 if (!response.ok) {
-                    aiTextElement.innerHTML = `<span class="text-red-400">⚠️ Kuskure wajen gudanar da sakon. (${response.statusText})</span>`;
+                    aiTextElement.innerHTML = `<span class="text-red-400">⚠️ Kuskure daga Backend (${response.status} ${response.statusText})</span>`;
                     return;
                 }
 
-                // Streaming response processing
+                // Stream response reading
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
                 aiTextElement.innerHTML = "";
@@ -256,7 +279,7 @@
                 }
 
             } catch (err) {
-                aiTextElement.innerHTML = `<span class="text-red-400">⚠️ An samu matsalar gudanarwa: ${err.message}</span>`;
+                aiTextElement.innerHTML = `<span class="text-red-400">⚠️ An samu matsalar haɗi: ${err.message}</span>`;
             }
         }
 

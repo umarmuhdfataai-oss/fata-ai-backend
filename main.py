@@ -34,13 +34,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Security Layer
+# CORS Security Layer Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Zaka iya kayyade wannan a Production
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Root Endpoint
