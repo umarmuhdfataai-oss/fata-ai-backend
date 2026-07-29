@@ -43,13 +43,12 @@ async def stream_chat(
             for msg in existing_chat["messages"][-6:]:  # Keep last 6 context messages
                 history_messages.append({"role": msg["role"], "content": msg["content"]})
 
-    # System Instructions tare da ainihin Kwanan Wata da Shekara (2026)
+    # System Instructions mai kyau
     system_prompt = {
         "role": "system",
         "content": (
-            "Ni ne Fata AI, mataimaki mai hikima da ke amsa tambayoyi cikin Hausa da Turanci daidai cikin amana. "
-            "A yau shekara ita ce 2026. Tabbatar dukkan amsoshin da kake bayarwa game da labarai, wasanni, da abubuwan da suka faru "
-            "suna dace da shekarar 2026 kuma ka ware kalmomi da sarari (space) yadda ya kamata."
+            "Ni ne Fata AI, mataimakin mai amfani da ke amsa tambayoyi cikin hausa da turanci. "
+            "Yi amfani da kyakykyawan tsarin rubutu tare da sarari (spaces) tsakanin ko wace kalma."
         )
     }
     
@@ -58,7 +57,6 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Groq Streaming Call
             stream = await groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages_payload,
@@ -70,13 +68,13 @@ async def stream_chat(
                     text_chunk = chunk.choices[0].delta.content
                     full_assistant_response += text_chunk
                     
-                    # Sauya sabon layi (\n) kadai, ba tare da goge ko daya daga cikin spaces ba
-                    clean_chunk = text_chunk.replace("\n", "\\n")
-                    yield f"data: {clean_chunk}\n\n"
+                    # Tura data a matsayin JSON string don kiyaye dukkan spaces & newlines
+                    payload = json.dumps({"content": text_chunk})
+                    yield f"data: {payload}\n\n"
 
             yield "data: [DONE]\n\n"
 
-            # Save completed interaction to MongoDB asynchronously
+            # Save to MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": req.message.strip()}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
@@ -92,7 +90,8 @@ async def stream_chat(
 
         except Exception as e:
             print(f"🚨 Streaming Error: {str(e)}")
-            yield f"data: ⚠️ Kuskure daga AI Engine: {str(e)}\n\n"
+            err_payload = json.dumps({"content": f"⚠️ Kuskure: {str(e)}"})
+            yield f"data: {err_payload}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

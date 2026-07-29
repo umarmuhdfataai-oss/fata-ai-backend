@@ -233,7 +233,7 @@
             `;
         }
 
-        // --- CHAT SYSTEM STREAMING ---
+        // --- CHAT SYSTEM STREAMING (FIXED PARSING & SPACING) ---
         async function handleSend(e) {
             e.preventDefault();
             const inputField = document.getElementById("messageInput");
@@ -281,22 +281,29 @@
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    
+
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split("\n");
                     buffer = lines.pop() || "";
 
                     for (const line of lines) {
-                        if (line.startsWith("data: ")) {
-                            let dataText = line.replace(/^data:\s*/, "");
-                            if (dataText === "[DONE]") continue;
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.startsWith("data: ")) {
+                            const rawData = trimmedLine.replace(/^data:\s*/, "");
+                            if (rawData === "[DONE]") continue;
 
-                            // Maida escaped newline zuwa ainihin newline \n
-                            dataText = dataText.replace(/\\n/g, "\n");
-
-                            // Amfani da textContent maimakon innerText yana kiyaye duk wani space/tsari
-                            aiTextElement.textContent += dataText;
-                            chatBox.scrollTop = chatBox.scrollHeight;
+                            try {
+                                const parsed = JSON.parse(rawData);
+                                if (parsed.content) {
+                                    aiTextElement.textContent += parsed.content;
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+                                }
+                            } catch (err) {
+                                // Fallback idan plain text ne
+                                let textContent = rawData.replace(/\\n/g, "\n");
+                                aiTextElement.textContent += textContent;
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
                         }
                     }
                 }
