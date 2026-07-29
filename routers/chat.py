@@ -43,10 +43,14 @@ async def stream_chat(
             for msg in existing_chat["messages"][-6:]:  # Keep last 6 context messages
                 history_messages.append({"role": msg["role"], "content": msg["content"]})
 
-    # Add system instructions & current user prompt
+    # System Instructions tare da ainihin Kwanan Wata da Shekara (2026)
     system_prompt = {
         "role": "system",
-        "content": "Ni ne Fata AI, mataimakin mai amfani da ke amsa tambayoyi cikin hausa da turanci a tsaf da kyau."
+        "content": (
+            "Ni ne Fata AI, mataimaki mai hikima da ke amsa tambayoyi cikin Hausa da Turanci daidai cikin amana. "
+            "A yau shekara ita ce 2026. Tabbatar dukkan amsoshin da kake bayarwa game da labarai, wasanni, da abubuwan da suka faru "
+            "suna dace da shekarar 2026 kuma ka ware kalmomi da sarari (space) yadda ya kamata."
+        )
     }
     
     messages_payload = [system_prompt] + history_messages + [{"role": "user", "content": req.message.strip()}]
@@ -56,7 +60,7 @@ async def stream_chat(
         try:
             # Groq Streaming Call
             stream = await groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile", # Ko kuma llama3-8b-8192
+                model="llama-3.3-70b-versatile",
                 messages=messages_payload,
                 stream=True
             )
@@ -66,8 +70,7 @@ async def stream_chat(
                     text_chunk = chunk.choices[0].delta.content
                     full_assistant_response += text_chunk
                     
-                    # Sanar da SSE Chunk Format guda daya da Frontend ke tsammani
-                    # Muna mayar da \n zuwa \\n don tsarin SSE stream
+                    # Sauya sabon layi (\n) kadai, ba tare da goge ko daya daga cikin spaces ba
                     clean_chunk = text_chunk.replace("\n", "\\n")
                     yield f"data: {clean_chunk}\n\n"
 

@@ -281,15 +281,21 @@
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
+                    
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split("\n");
                     buffer = lines.pop() || "";
 
                     for (const line of lines) {
                         if (line.startsWith("data: ")) {
-                            const dataText = line.replace(/^data:\s*/, "");
+                            let dataText = line.replace(/^data:\s*/, "");
                             if (dataText === "[DONE]") continue;
-                            aiTextElement.innerText += dataText.replace(/\\n/g, "\n");
+
+                            // Maida escaped newline zuwa ainihin newline \n
+                            dataText = dataText.replace(/\\n/g, "\n");
+
+                            // Amfani da textContent maimakon innerText yana kiyaye duk wani space/tsari
+                            aiTextElement.textContent += dataText;
                             chatBox.scrollTop = chatBox.scrollHeight;
                         }
                     }
@@ -314,7 +320,6 @@
             imgElement.classList.add("hidden");
 
             try {
-                // Idan kana da backend endpoint na image generation, aikawa anan:
                 const res = await fetch(`${API_BASE_URL}/api/v2/image/generate`, {
                     method: "POST",
                     headers: {
@@ -326,10 +331,8 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    // Assuming backend returns { image_url: "..." }
                     imgElement.src = data.image_url;
                 } else {
-                    // Fallback to direct client-side generation (Pollinations AI) if backend endpoint is not yet created
                     const encodedPrompt = encodeURIComponent(prompt);
                     imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=800&height=600&nologo=true`;
                 }
