@@ -220,14 +220,14 @@
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold shrink-0">
                     AI
                 </div>
-                <div class="text-sm leading-relaxed whitespace-pre-wrap" id="aiResponseContainer">
+                <div class="text-sm leading-relaxed whitespace-pre-wrap ai-container">
                     <span class="animate-pulse text-gray-400">Yana tunani...</span>
                 </div>
             `;
             chatBox.appendChild(aiDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            const aiTextElement = aiDiv.querySelector("#aiResponseContainer");
+            const aiTextElement = aiDiv.querySelector(".ai-container");
 
             try {
                 let response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {

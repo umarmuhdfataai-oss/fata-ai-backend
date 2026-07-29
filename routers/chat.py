@@ -3,7 +3,7 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from google import genai
+from groq import Groq
 
 from core.database import get_chat_collection
 from core.security import get_current_user
@@ -30,7 +30,7 @@ async def save_conversation(session_id: str, user_email: str, message: str, full
             history = existing_chat.get("messages", [])
         
         history.append({"role": "user", "content": message})
-        history.append({"role": "model", "content": full_response})
+        history.append({"role": "assistant", "content": full_response})
         
         await chat_collection.update_one(
             {"_id": session_id},
@@ -55,49 +55,51 @@ async def chat_stream(
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="GEMINI_API_KEY pipeline variable is unconfigured."
+                detail="GROQ_API_KEY environment variable is unconfigured."
             )
 
-        client = genai.Client(api_key=api_key)
+        client = Groq(api_key=api_key)
         user_email = current_user.get("sub", "guest_user")
 
         def generate_chunks():
             full_response = ""
-            
-            # Jerin ingantattun models a sabon Google SDK
-            models_to_try = [
-                'gemini-2.5-flash',
-                'gemini-2.0-flash',
-                'gemini-1.5-flash-latest'
-            ]
-            
             success = False
-            for model_name in models_to_try:
-                try:
-                    response = client.models.generate_content_stream(
-                        model=model_name,
-                        contents=req.message
-                    )
-                    for chunk in response:
-                        if hasattr(chunk, "text") and chunk.text:
-                            full_response += chunk.text
-                            yield chunk.text
-                    success = True
-                    break  # Idan ya yi aiki, kada ka sake kiran wani model din
-                except Exception as model_err:
-                    print(f"⚠️ Failed attempt with model {model_name}: {str(model_err)}")
-                    continue
-            
-            if not success:
-                err_msg = "⚠️ An samu cinkoso a tsarin Google API (Quota/Rate Limit). Tabbatar ka jikata dakika 30 kafin sake aikawa, ko ka sauya GEMINI_API_KEY a Render."
-                full_response += err_msg
+
+            try:
+                # Kwashe tattaunawa ta amfani da Groq da Llama-3.3-70b
+                response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Ni ne Fata AI, mataimaki mai kaifin kwakwalwa. Ina amsa tambayoyi cikin sauki da Hausa ko Turanci."
+                        },
+                        {
+                            "role": "user",
+                            "content": req.message
+                        }
+                    ],
+                    stream=True
+                )
+
+                for chunk in response:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        text_chunk = chunk.choices[0].delta.content
+                        full_response += text_chunk
+                        yield text_chunk
+
+                success = True
+
+            except Exception as err:
+                print(f"⚠️ Groq API Error: {str(err)}")
+                err_msg = f"⚠️ An samu kuskure wajen sarrafa saƙo daga Groq API: {str(err)}"
                 yield err_msg
 
-            # Adana tattaunawa kadai idan aka samu amsa mai kyau
+            # Adana tattaunawa a MongoDB idan an samu amsa mai kyau
             if full_response and success:
                 background_tasks.add_task(
                     save_conversation,

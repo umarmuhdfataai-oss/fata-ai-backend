@@ -1,7 +1,7 @@
 import os
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks
-from google import genai
+from groq import Groq
 
 from core.database import get_chat_collection
 from core.security import get_current_user
@@ -27,7 +27,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         history.append({
             "role": "system",
             "content": "[File Uploaded Successfully]",
-            "file_uri": file_info["uri"],
+            "file_id": file_info["file_id"],
             "mime_type": file_info["mime_type"]
         })
         
@@ -48,7 +48,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         print(f"🚨 File DB Log Thread Failure: {str(e)}")
 
 @router.post("/upload")
-async def upload_file_to_gemini(
+async def upload_file_to_groq(
     file: UploadFile = File(...),
     session_id: str = Form("default_session"),
     background_tasks: BackgroundTasks = None,
@@ -56,36 +56,40 @@ async def upload_file_to_gemini(
 ):
     temp_file_path = f"temp_{file.filename}"
     try:
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="GEMINI_API_KEY pipeline variable is unconfigured."
+                detail="GROQ_API_KEY pipeline variable is unconfigured."
             )
 
         # Adana fayil a gida (temporary local storage)
         with open(temp_file_path, "wb") as f:
             f.write(await file.read())
 
-        client = genai.Client(api_key=api_key)
+        client = Groq(api_key=api_key)
 
         try:
-            uploaded_file = client.files.upload(file=temp_file_path)
+            with open(temp_file_path, "rb") as file_to_upload:
+                uploaded_file = client.files.create(
+                    file=file_to_upload,
+                    purpose="user_data"
+                )
         except Exception as primary_err:
-            print(f"⚠️ Primary Gemini upload error: {str(primary_err)}")
+            print(f"⚠️ Primary Groq upload error: {str(primary_err)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"File upload failed: {str(primary_err)}"
             )
 
-        # Goge temporary file
+        # Goge temporary file daga uwar garke
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
         file_info = {
             "file_name": file.filename,
-            "uri": uploaded_file.uri,
-            "mime_type": uploaded_file.mime_type
+            "file_id": uploaded_file.id,
+            "mime_type": file.content_type or "application/octet-stream"
         }
 
         user_email = current_user.get("sub", "guest_user")

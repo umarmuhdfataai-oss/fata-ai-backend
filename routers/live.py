@@ -4,7 +4,7 @@ import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from core.database import get_chat_collection
 
-router = APIRouter(prefix="/live", tags=["Real-time Gemini Audio Engine"])
+router = APIRouter(prefix="/live", tags=["Real-time Audio Engine"])
 
 async def log_live_audio(session_id: str, user_email: str, event: str):
     """
@@ -21,7 +21,11 @@ async def log_live_audio(session_id: str, user_email: str, event: str):
         if existing_chat:
             history = existing_chat.get("messages", [])
         
-        history.append({"role": "system", "content": event, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()})
+        history.append({
+            "role": "system", 
+            "content": event, 
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
         
         await chat_collection.update_one(
             {"_id": session_id},
@@ -42,14 +46,14 @@ async def log_live_audio(session_id: str, user_email: str, event: str):
 @router.websocket("/ws")
 async def live_audio_socket(websocket: WebSocket):
     await websocket.accept()
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
     
     if not api_key:
-        await websocket.close(code=1008, reason="GEMINI_API_KEY missing")
+        await websocket.close(code=1008, reason="GROQ_API_KEY missing")
         return
         
     try:
-        await websocket.send_text("Live audio stream engine connected successfully.")
+        await websocket.send_text("Fata AI Live Audio Stream Engine connected successfully.")
         
         # Adana log din session a background don kar ya rage gudu (non-blocking)
         asyncio.create_task(log_live_audio("live_session", "guest_user", "Live audio session started."))

@@ -1,11 +1,8 @@
-import json
-import base64
 import datetime
 import os
+import urllib.parse
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel
-from google import genai
-from google.genai import types
 
 from core.database import get_chat_collection
 from core.security import get_current_user
@@ -48,79 +45,40 @@ async def generate_creative_image(
     try:
         user_email = current_user.get("sub", "guest_user")
         
-        api_key_str = os.environ.get("GEMINI_API_KEY")
-        if not api_key_str:
+        if not req.prompt or not req.prompt.strip():
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                detail="GEMINI_API_KEY pipeline variable is unconfigured."
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Prompt string cannot be empty."
             )
-            
-        client = genai.Client(api_key=api_key_str)
 
-        try:
-            # Primary attempt: Imagen 3
-            result = client.models.generate_images(
-                model='imagen-3.0-generate-002',
-                prompt=req.prompt,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/jpeg",
-                    aspect_ratio="1:1"
-                )
-            )
-        except Exception as primary_err:
-            print(f"⚠️ Primary Imagen error: {str(primary_err)}")
-            try:
-                # Fallback attempt
-                result = client.models.generate_images(
-                    model='imagen-3.0-fast-generate-001',
-                    prompt=req.prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        output_mime_type="image/jpeg",
-                        aspect_ratio="1:1"
-                    )
-                )
-            except Exception as fallback_err:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Image generation failed: {str(fallback_err)}"
-                )
-        
+        # Kirkirar High-Quality Image URL ta hanyar Pollinations AI Engine (100% Free & No Rate Limit)
+        encoded_prompt = urllib.parse.quote(req.prompt.strip())
+        full_image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&seed=42&model=flux&nologo=true"
+
         chat_collection = get_chat_collection()
+        history = []
         
-        if result.generated_images:
-            for generated_image in result.generated_images:
-                base64_image = base64.b64encode(generated_image.image.image_bytes).decode("utf-8")
-                full_image_uri = f"data:image/jpeg;base64,{base64_image}"
-                
-                history = []
-                if chat_collection is not None:
-                    existing_chat = await chat_collection.find_one({"_id": req.session_id})
-                    if existing_chat:
-                        history = existing_chat.get("messages", [])
-                
-                history.append({"role": "user", "content": f"Kera mini hoton: {req.prompt}"})
-                history.append({
-                    "role": "model",
-                    "content": "[Generated Image Asset UI Ready]",
-                    "image_url": full_image_uri
-                })
-                
-                background_tasks.add_task(log_image_to_mongodb, req.session_id, history, user_email)
-                
-                return {
-                    "status": "success",
-                    "prompt": req.prompt,
-                    "mime_type": "image/jpeg",
-                    "image_data": full_image_uri
-                }
-            
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image generation engine returned empty grid."
-        )
-        
+        if chat_collection is not None:
+            existing_chat = await chat_collection.find_one({"_id": req.session_id})
+            if existing_chat:
+                history = existing_chat.get("messages", [])
+
+        history.append({"role": "user", "content": f"Kera mini hoton: {req.prompt}"})
+        history.append({
+            "role": "assistant",
+            "content": "[Generated Image Asset UI Ready]",
+            "image_url": full_image_url
+        })
+
+        background_tasks.add_task(log_image_to_mongodb, req.session_id, history, user_email)
+
+        return {
+            "status": "success",
+            "prompt": req.prompt,
+            "mime_type": "image/jpeg",
+            "image_data": full_image_url
+        }
+
     except HTTPException as he:
         raise he
     except Exception as e:
