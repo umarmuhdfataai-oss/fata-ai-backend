@@ -1,118 +1,95 @@
+import json
+import asyncio
 import os
-import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from groq import Groq
+from typing import Optional
+from groq import AsyncGroq
 
-from core.database import get_chat_collection
 from core.security import get_current_user
+from core.database import get_chat_collection
 
 router = APIRouter(prefix="/chat", tags=["AI Chat Engine"])
 
+# Initialize Groq Client
+groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
+
 class ChatRequest(BaseModel):
     message: str
-    session_id: str
-
-async def save_conversation(session_id: str, user_email: str, message: str, full_response: str):
-    """
-    Adana tattaunawa a MongoDB tare da cikakken saƙo (history).
-    """
-    chat_collection = get_chat_collection()
-    if chat_collection is None:
-        print("🚨 DB not initialized for conversation saving.")
-        return
-    
-    try:
-        history = []
-        existing_chat = await chat_collection.find_one({"_id": session_id})
-        if existing_chat:
-            history = existing_chat.get("messages", [])
-        
-        history.append({"role": "user", "content": message})
-        history.append({"role": "assistant", "content": full_response})
-        
-        await chat_collection.update_one(
-            {"_id": session_id},
-            {
-                "$set": {
-                    "user_email": user_email,
-                    "messages": history,
-                    "chat_mode": "standard",
-                    "title": "AI Chat Session",
-                    "updated_at": datetime.datetime.now(datetime.timezone.utc)
-                }
-            },
-            upsert=True
-        )
-    except Exception as e:
-        print(f"🚨 Conversation save error: {str(e)}")
+    session_id: Optional[str] = None
 
 @router.post("/stream")
-async def chat_stream(
+async def stream_chat(
     req: ChatRequest,
-    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
-    try:
-        api_key = os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="GROQ_API_KEY environment variable is unconfigured."
+    if not req.message or not req.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message cannot be empty."
+        )
+
+    user_email = current_user.get("sub", "guest_user")
+    session_id = req.session_id if req.session_id else "default_session"
+
+    # MongoDB Chat History Retrieve
+    chat_collection = get_chat_collection()
+    history_messages = []
+    
+    if chat_collection is not None:
+        existing_chat = await chat_collection.find_one({"_id": session_id})
+        if existing_chat and "messages" in existing_chat:
+            for msg in existing_chat["messages"][-6:]:  # Keep last 6 context messages
+                history_messages.append({"role": msg["role"], "content": msg["content"]})
+
+    # Add system instructions & current user prompt
+    system_prompt = {
+        "role": "system",
+        "content": "Ni ne Fata AI, mataimakin mai amfani da ke amsa tambayoyi cikin hausa da turanci a tsaf da kyau."
+    }
+    
+    messages_payload = [system_prompt] + history_messages + [{"role": "user", "content": req.message.strip()}]
+
+    async def event_generator():
+        full_assistant_response = ""
+        try:
+            # Groq Streaming Call
+            stream = await groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile", # Ko kuma llama3-8b-8192
+                messages=messages_payload,
+                stream=True
             )
 
-        client = Groq(api_key=api_key)
-        user_email = current_user.get("sub", "guest_user")
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    text_chunk = chunk.choices[0].delta.content
+                    full_assistant_response += text_chunk
+                    
+                    # Sanar da SSE Chunk Format guda daya da Frontend ke tsammani
+                    # Muna mayar da \n zuwa \\n don tsarin SSE stream
+                    clean_chunk = text_chunk.replace("\n", "\\n")
+                    yield f"data: {clean_chunk}\n\n"
 
-        def generate_chunks():
-            full_response = ""
-            success = False
+            yield "data: [DONE]\n\n"
 
-            try:
-                # Sarrafa tattaunawa ta amfani da Groq da Llama-3.3-70b
-                response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Ni ne Fata AI, mataimaki mai kaifin kwakwalwa. Ina amsa tambayoyi cikin sauki da Hausa ko Turanci."
-                        },
-                        {
-                            "role": "user",
-                            "content": req.message
-                        }
-                    ],
-                    stream=True
+            # Save completed interaction to MongoDB asynchronously
+            if chat_collection is not None:
+                new_user_msg = {"role": "user", "content": req.message.strip()}
+                new_ai_msg = {"role": "assistant", "content": full_assistant_response}
+                
+                await chat_collection.update_one(
+                    {"_id": session_id},
+                    {
+                        "$set": {"user_email": user_email},
+                        "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
+                    },
+                    upsert=True
                 )
 
-                for chunk in response:
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        text_chunk = chunk.choices[0].delta.content
-                        full_response += text_chunk
-                        yield text_chunk
+        except Exception as e:
+            print(f"🚨 Streaming Error: {str(e)}")
+            yield f"data: ⚠️ Kuskure daga AI Engine: {str(e)}\n\n"
+            yield "data: [DONE]\n\n"
 
-                success = True
-
-            except Exception as err:
-                print(f"⚠️ Groq API Error: {str(err)}")
-                err_msg = f"⚠️ An samu kuskure wajen sarrafa saƙo daga Groq API: {str(err)}"
-                yield err_msg
-
-            # Adana tattaunawa a MongoDB idan an samu amsa mai kyau
-            if full_response and success:
-                background_tasks.add_task(
-                    save_conversation,
-                    req.session_id,
-                    user_email,
-                    req.message,
-                    full_response
-                )
-
-        return StreamingResponse(generate_chunks(), media_type="text/plain")
-
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"🚨 Unexpected chat error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Chat engine internal failure.")
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
