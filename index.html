@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fata AI Core - Powered by Gemini</title>
+    <title>Fata AI Ultra Core - Powered by Groq LPU</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -14,8 +14,8 @@
             color: #e3e3e3;
             font-family: 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        .gemini-gradient-text {
-            background: linear-gradient(74deg, #4285f4 0%, #9b51e0 35%, #e91e63 100%);
+        .groq-gradient-text {
+            background: linear-gradient(74deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -46,7 +46,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         .custom-input-bar:focus-within {
-            border-color: #8ab4f8;
+            border-color: #f97316;
             background-color: #282a2c;
         }
         ::-webkit-scrollbar { width: 6px; }
@@ -69,17 +69,17 @@
                         <i class="fa-solid fa-bars text-lg"></i>
                     </button>
                     <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow">
-                            ✦
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold shadow">
+                            ⚡
                         </div>
-                        <span class="font-semibold text-base gemini-gradient-text">Fata AI</span>
+                        <span class="font-semibold text-base groq-gradient-text">Fata AI</span>
                     </div>
                 </div>
             </div>
 
             <!-- New Chat Button -->
             <button onclick="startNewSession()" class="flex items-center space-x-3 w-full px-4 py-3 rounded-full bg-[#131314] hover:bg-[#282a2c] text-gray-200 text-sm font-medium border border-[#3c4043] transition shadow-sm">
-                <i class="fa-regular fa-pen-to-square text-blue-400"></i>
+                <i class="fa-regular fa-pen-to-square text-orange-400"></i>
                 <span>Sabuwar Tattaunawa</span>
             </button>
 
@@ -87,7 +87,7 @@
             <nav class="space-y-1">
                 <div onclick="switchMode('chat')" id="navChat" class="sidebar-item active">
                     <i class="fa-regular fa-comment-dots text-base w-5 text-center"></i>
-                    <span>Chat</span>
+                    <span>Chat (Groq LPU)</span>
                 </div>
                 <div onclick="openSearchModal()" id="navSearch" class="sidebar-item">
                     <i class="fa-solid fa-magnifying-glass text-base w-5 text-center"></i>
@@ -105,7 +105,7 @@
             <div class="flex-1 overflow-y-auto space-y-1 pr-1">
                 <span class="text-xs font-medium text-gray-400 px-4 block mb-2">Tattaunawar Baya</span>
                 <div id="recentChatsList" class="space-y-1">
-                    <!-- History list items will be injected here JS -->
+                    <!-- History list items injected via JS -->
                 </div>
             </div>
         </div>
@@ -113,7 +113,7 @@
         <!-- Bottom User Profile Bar -->
         <div class="border-t border-[#282a2c] pt-3 flex items-center justify-between px-2">
             <div class="flex items-center space-x-3 truncate">
-                <div class="w-8 h-8 rounded-full bg-slate-700 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                <div class="w-8 h-8 rounded-full bg-orange-700 text-white font-bold flex items-center justify-center text-xs shrink-0">
                     F
                 </div>
                 <div class="truncate">
@@ -121,7 +121,7 @@
                     <p class="text-[10px] text-green-400 font-medium" id="backendStatus">Connecting...</p>
                 </div>
             </div>
-            <button onclick="alert('Settings Panel: System is aligned with Gemini 1.5 Flash API')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
+            <button onclick="alert('Settings Panel: System is aligned with Groq LPU Engine')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
                 <i class="fa-solid fa-gear text-sm"></i>
             </button>
         </div>
@@ -137,15 +137,15 @@
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
                 <div class="flex items-center space-x-2">
-                    <span id="currentWorkspaceTitle" class="text-base font-semibold text-gray-200">Fata AI Core</span>
-                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium" id="selectedModelBadge">Gemini 1.5 Flash</span>
+                    <span id="currentWorkspaceTitle" class="text-base font-semibold text-gray-200">Fata AI Ultra Core</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium" id="selectedModelBadge">Llama 3.3 70B</span>
                 </div>
             </div>
 
             <!-- Upgrade Pill Button -->
-            <button onclick="alert('You are already using Fata AI Ultra Core!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition">
-                <i class="fa-solid fa-sparkles text-blue-400"></i>
-                <span>Upgrade to Advanced</span>
+            <button onclick="alert('You are utilizing Enterprise-Grade Groq LPU Infrastructure!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs font-semibold transition">
+                <i class="fa-solid fa-bolt text-orange-400"></i>
+                <span>Groq High-Speed Active</span>
             </button>
         </header>
 
@@ -155,10 +155,10 @@
             <!-- Default Welcome Screen -->
             <div id="welcomeScreen" class="my-auto text-center space-y-4">
                 <h1 class="text-3xl md:text-5xl font-semibold text-gray-300">
-                    Barka da zuwa, <span class="gemini-gradient-text font-bold">Fakruddeen</span>
+                    Barka da zuwa, <span class="groq-gradient-text font-bold">Fakruddeen</span>
                 </h1>
                 <p class="text-gray-400 text-sm md:text-base max-w-md mx-auto">
-                    Ina zamu dosa a yau? Za ka iya tambaya, gina lambobin kwamfuta, ko sanar da ni in kirkira miki hoto.
+                    Ina zamu dosa a yau? Fata AI tana aiki ne da gudu mai zafi ta hanyar Groq LPU Engine don sauƙaƙe maka duk wani aiki.
                 </p>
             </div>
 
@@ -174,7 +174,7 @@
             </div>
         </div>
 
-        <!-- FLOATING GEMINI INPUT BAR -->
+        <!-- FLOATING INPUT BAR -->
         <div class="p-4 w-full max-w-4xl mx-auto">
             <!-- Attached File Preview Container -->
             <div id="attachmentPreview" class="hidden items-center justify-between bg-[#1e1f20] border border-[#3c4043] rounded-xl px-4 py-2 mb-2 text-xs text-gray-300">
@@ -197,17 +197,17 @@
                 <!-- Model Selector Dropdown -->
                 <div class="relative shrink-0">
                     <button type="button" onclick="toggleModelDropdown()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#131314] border border-[#3c4043] text-xs font-medium text-gray-300 hover:bg-[#282a2c]">
-                        <span id="selectedModelText">Flash</span>
+                        <span id="selectedModelText">Llama 3.3</span>
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
-                    <div id="modelDropdown" class="hidden absolute bottom-10 right-0 w-36 bg-[#1e1f20] border border-[#3c4043] rounded-xl shadow-xl z-30 py-1 text-xs">
-                        <div onclick="selectModel('Flash')" class="px-3 py-2 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between">
-                            <span>Gemini Flash</span>
-                            <i class="fa-solid fa-bolt text-yellow-400"></i>
+                    <div id="modelDropdown" class="hidden absolute bottom-10 right-0 w-44 bg-[#1e1f20] border border-[#3c4043] rounded-xl shadow-xl z-30 py-1 text-xs">
+                        <div onclick="selectModel('Llama 3.3 70B', 'Llama 3.3')" class="px-3 py-2 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between">
+                            <span>Llama 3.3 70B</span>
+                            <i class="fa-solid fa-bolt text-orange-400"></i>
                         </div>
-                        <div onclick="selectModel('Pro')" class="px-3 py-2 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between">
-                            <span>Gemini Pro</span>
-                            <i class="fa-solid fa-brain text-purple-400"></i>
+                        <div onclick="selectModel('Mixtral 8x7B', 'Mixtral')" class="px-3 py-2 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between">
+                            <span>Mixtral 8x7B</span>
+                            <i class="fa-solid fa-brain text-amber-400"></i>
                         </div>
                     </div>
                 </div>
@@ -218,7 +218,7 @@
                 </button>
 
                 <!-- Submit / Send Button -->
-                <button type="submit" class="p-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition shrink-0 shadow-md">
+                <button type="submit" class="p-2.5 rounded-full bg-orange-600 hover:bg-orange-500 text-white transition shrink-0 shadow-md">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </form>
@@ -237,9 +237,7 @@
                 <button onclick="closeSearchModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <input type="text" id="searchInputModal" onkeyup="filterChatsHistory()" placeholder="Rubuta kalmar bincike..." class="w-full bg-[#131314] border border-[#3c4043] rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none">
-            <div id="searchResultsList" class="max-h-60 overflow-y-auto space-y-2">
-                <!-- Search results injected here -->
-            </div>
+            <div id="searchResultsList" class="max-h-60 overflow-y-auto space-y-2"></div>
         </div>
     </div>
 
@@ -250,21 +248,19 @@
         let userAuthToken = "";
         let currentMode = "chat";
         let attachedFile = null;
-        let activeModel = "Flash";
+        let activeModel = "llama-3.3-70b-versatile";
         let isRecording = false;
 
         function generateSessionId() {
             return "session_" + Math.random().toString(36).substring(2, 11);
         }
 
-        // --- SIDEBAR TOGGLE ---
         function toggleSidebar() {
             const sidebar = document.getElementById("mainSidebar");
             sidebar.classList.toggle("-translate-x-full");
             sidebar.classList.toggle("absolute");
         }
 
-        // --- WORKSPACE MODES SWITCHER ---
         function switchMode(mode) {
             currentMode = mode;
             const welcomeScreen = document.getElementById("welcomeScreen");
@@ -276,7 +272,7 @@
 
             if (mode === 'chat') {
                 document.getElementById("navChat").classList.add("active");
-                title.innerText = "Interactive AI Chat";
+                title.innerText = "Interactive Groq LPU Chat";
                 imageContainer.classList.add("hidden");
                 if (chatContainer.children.length > 0) {
                     welcomeScreen.classList.add("hidden");
@@ -293,7 +289,6 @@
             }
         }
 
-        // --- INITIALIZE AUTHENTICATION ---
         async function initializeAuth() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/v2/auth/guest`, { method: "POST" });
@@ -309,7 +304,6 @@
             }
         }
 
-        // --- NEW CHAT SESSION ---
         function startNewSession() {
             currentSessionId = generateSessionId();
             document.getElementById("chatContainer").innerHTML = "";
@@ -318,7 +312,6 @@
             removeAttachment();
         }
 
-        // --- SUBMIT FORM HANDLER ---
         async function handleFormSubmit(e) {
             e.preventDefault();
             const input = document.getElementById("userInput");
@@ -334,7 +327,6 @@
             removeAttachment();
         }
 
-        // --- CHAT SYSTEM WITH STREAMING & LOCAL STORAGE ---
         async function handleSendChat(message) {
             if (!userAuthToken) await initializeAuth();
 
@@ -344,25 +336,21 @@
             welcomeScreen.classList.add("hidden");
             chatContainer.classList.remove("hidden");
 
-            // Save Title to Local History
             saveToHistory(currentSessionId, message);
 
-            // User Message Bubble
             const userBubble = document.createElement("div");
             userBubble.className = "flex justify-end my-4";
             userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed">${escapeHtml(message)}</div>`;
             chatContainer.appendChild(userBubble);
 
-            // AI Response Bubble
             const aiBubble = document.createElement("div");
             aiBubble.className = "flex items-start space-x-3 my-4";
             aiBubble.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shrink-0">✦</div>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-xs text-white font-bold shrink-0">⚡</div>
                 <div class="space-y-2 max-w-2xl w-full">
                     <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ai-content">
-                        <span class="animate-pulse text-gray-400">Yana tunani...</span>
+                        <span class="animate-pulse text-gray-400">Groq yana saurin rubuta amsa...</span>
                     </div>
-                    <!-- Action Buttons (Copy / Regenerate / Feedback) -->
                     <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
                         <button onclick="copyToClipboard(this)" class="hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
                         <button onclick="handleSendChat('${escapeHtml(message)}')" class="hover:text-white transition" title="Sake Amsawa"><i class="fa-solid fa-rotate-right"></i></button>
@@ -425,12 +413,11 @@
             }
         }
 
-        // --- IMAGE GENERATION ---
         async function handleGenerateImage(prompt) {
             const placeholder = document.getElementById("imgPlaceholder");
             const imgElement = document.getElementById("generatedImg");
 
-            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-purple-400 text-xl mr-2"></i> Yana ƙirƙirar hoto...`;
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-orange-400 text-xl mr-2"></i> Yana ƙirƙirar hoto...`;
             placeholder.classList.remove("hidden");
             imgElement.classList.add("hidden");
 
@@ -446,17 +433,16 @@
             }
         }
 
-        // --- VOICE RECOGNITION (MICROPHONE) ---
         function toggleVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                alert("Sallama! Browser din ku bai goyon bayan Voice Input ba.");
+                alert("Browser ɗin ku bai goyon bayan Voice Input ba.");
                 return;
             }
 
             const micBtn = document.getElementById("micBtn");
             const recognition = new SpeechRecognition();
-            recognition.lang = 'ha-NG'; // Hausa language support
+            recognition.lang = 'ha-NG';
 
             if (!isRecording) {
                 recognition.start();
@@ -481,19 +467,21 @@
             };
         }
 
-        // --- MODEL SELECTOR DROPDOWN ---
         function toggleModelDropdown() {
             document.getElementById("modelDropdown").classList.toggle("hidden");
         }
 
-        function selectModel(modelName) {
-            activeModel = modelName;
-            document.getElementById("selectedModelText").innerText = modelName;
-            document.getElementById("selectedModelBadge").innerText = `Gemini 1.5 ${modelName}`;
+        function selectModel(modelName, badgeText) {
+            if(badgeText === 'Llama 3.3') {
+                activeModel = "llama-3.3-70b-versatile";
+            } else {
+                activeModel = "mixtral-8x7b-32768";
+            }
+            document.getElementById("selectedModelText").innerText = badgeText;
+            document.getElementById("selectedModelBadge").innerText = modelName;
             document.getElementById("modelDropdown").classList.add("hidden");
         }
 
-        // --- FILE ATTACHMENT HANDLER ---
         function handleFileUpload(e) {
             const file = e.target.files[0];
             if (file) {
@@ -511,7 +499,6 @@
             document.getElementById("attachmentPreview").classList.remove("flex");
         }
 
-        // --- HISTORY LOCAL STORAGE LOGIC ---
         function saveToHistory(sessionId, title) {
             let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
             if (!history.find(h => h.id === sessionId)) {
@@ -547,10 +534,8 @@
         function loadChatSession(id) {
             currentSessionId = id;
             switchMode('chat');
-            alert(`An shigar da Tattaunawa: ${id}`);
         }
 
-        // --- SEARCH MODAL FUNCTIONS ---
         function openSearchModal() {
             document.getElementById("searchModal").classList.remove("hidden");
             filterChatsHistory();
@@ -581,7 +566,6 @@
             });
         }
 
-        // --- UTILITY: COPY TO CLIPBOARD ---
         function copyToClipboard(btn) {
             const text = btn.closest(".space-y-2").querySelector(".ai-content").innerText;
             navigator.clipboard.writeText(text);
@@ -593,7 +577,6 @@
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
 
-        // Init
         initializeAuth();
         renderHistory();
     </script>
