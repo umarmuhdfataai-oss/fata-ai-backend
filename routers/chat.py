@@ -6,18 +6,17 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
-# Sabon SDK na Google GenAI
-from google import genai
-from google.genai import types
+# Amfani da Groq SDK
+from groq import Groq
 
 from core.security import get_current_user
 from core.database import get_chat_collection
 
 router = APIRouter(prefix="/chat", tags=["AI Chat Engine"])
 
-# Configure Google Gemini Client
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+# Configure Groq Client
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 class ChatRequest(BaseModel):
     message: str
@@ -37,7 +36,7 @@ async def stream_chat(
     if not client:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="GEMINI_API_KEY is not configured on the server."
+            detail="GROQ_API_KEY is not configured on the server."
         )
 
     user_email = current_user.get("sub", "guest_user")
@@ -45,52 +44,37 @@ async def stream_chat(
 
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
-    gemini_contents = []
+    messages = [
+        {
+            "role": "system",
+            "content": "Ni ne Fata AI, mataimakin mai amfani mai amfani da Groq LPU Engine. Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe da kiyaye sararin kalmomi (spaces)."
+        }
+    ]
     
     if chat_collection is not None:
         existing_chat = await chat_collection.find_one({"_id": session_id})
         if existing_chat and "messages" in existing_chat:
             for msg in existing_chat["messages"][-6:]:  # Keep last 6 context messages
-                role_map = "user" if msg["role"] == "user" else "model"
-                gemini_contents.append(
-                    types.Content(
-                        role=role_map,
-                        parts=[types.Part.from_text(text=msg["content"])]
-                    )
-                )
+                role = "user" if msg["role"] == "user" else "assistant"
+                messages.append({"role": role, "content": msg["content"]})
 
     # Add current prompt
-    gemini_contents.append(
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text=req.message.strip())]
-        )
-    )
-
-    # System instruction & Config
-    system_instruction = (
-        "Ni ne Fata AI, mataimakin mai amfani mai amfani da Gemini Engine. "
-        "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe da kiyaye sararin kalmomi (spaces)."
-    )
-    
-    config = types.GenerateContentConfig(
-        system_instruction=system_instruction
-    )
+    messages.append({"role": "user", "content": req.message.strip()})
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da gemini-2.0-flash wanda sabon account ɗinka zai karɓa ba tare da matsala ba
+            # Amfani da llama-3.3-70b-versatile don samun ingantattun amsoshi masu ƙarfi
             response_stream = await asyncio.to_thread(
-                client.models.generate_content_stream,
-                model='gemini-2.0-flash',
-                contents=gemini_contents,
-                config=config
+                client.chat.completions.create,
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                stream=True
             )
 
             for chunk in response_stream:
-                if chunk.text:
-                    text_chunk = chunk.text
+                if chunk.choices[0].delta.content:
+                    text_chunk = chunk.choices[0].delta.content
                     full_assistant_response += text_chunk
                     
                     payload = json.dumps({"content": text_chunk})
@@ -115,7 +99,7 @@ async def stream_chat(
 
         except Exception as e:
             print(f"🚨 Streaming Error: {str(e)}")
-            err_payload = json.dumps({"content": f"⚠️ Kuskure daga Gemini Engine: {str(e)}"})
+            err_payload = json.dumps({"content": f"⚠️ Kuskure daga Groq Engine: {str(e)}"})
             yield f"data: {err_payload}\n\n"
             yield "data: [DONE]\n\n"
 
