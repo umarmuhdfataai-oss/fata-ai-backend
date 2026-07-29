@@ -70,7 +70,7 @@ async def chat_stream(
             success = False
 
             try:
-                # Kwashe tattaunawa ta amfani da Groq da Llama-3.3-70b
+                # Sarrafa tattaunawa ta amfani da Groq da Llama-3.3-70b
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
