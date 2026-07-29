@@ -1,17 +1,16 @@
 import os
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks
-import google.generativeai as genai
+from google import genai
 
 from core.database import get_chat_collection
 from core.security import get_current_user
 
 router = APIRouter(prefix="/files", tags=["File Processing Engine"])
 
-# Configure Gemini
+# Configure Gemini Client
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 async def log_file_upload(session_id: str, user_email: str, file_info: dict):
     """
@@ -62,7 +61,7 @@ async def upload_file_to_gemini(
 ):
     temp_file_path = f"temp_{file.filename}"
     try:
-        if not GEMINI_API_KEY:
+        if not client:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="GEMINI_API_KEY variable is unconfigured."
@@ -73,11 +72,8 @@ async def upload_file_to_gemini(
             f.write(await file.read())
 
         try:
-            # Upload file zuwa Google Gemini Files API
-            uploaded_file = genai.upload_file(
-                path=temp_file_path,
-                display_name=file.filename
-            )
+            # Upload file zuwa Google Gemini Files API ta amfani da sabon client
+            uploaded_file = client.files.upload(file=temp_file_path)
         except Exception as primary_err:
             print(f"⚠️ Primary Gemini upload error: {str(primary_err)}")
             raise HTTPException(
@@ -91,8 +87,8 @@ async def upload_file_to_gemini(
 
         file_info = {
             "file_name": file.filename,
-            "file_uri": uploaded_file.uri,
-            "file_name_gemini": uploaded_file.name,
+            "file_uri": getattr(uploaded_file, "uri", ""),
+            "file_name_gemini": getattr(uploaded_file, "name", ""),
             "mime_type": file.content_type or "application/octet-stream"
         }
 
