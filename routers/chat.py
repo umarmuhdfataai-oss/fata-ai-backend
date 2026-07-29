@@ -61,11 +61,10 @@ async def stream_chat(
         "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe da kiyaye sararin kalmomi (spaces)."
     )
     
-    # Initialize Gemini Model with Search Grounding Enabled
+    # Initialize Gemini Model (An gyara ta yadda ba za ta nemi google_search ba)
     model = genai.GenerativeModel(
         model_name='gemini-1.5-flash',
-        system_instruction=system_instruction,
-        tools=[{"google_search": {}}]  # Enable Live Google Search Grounding!
+        system_instruction=system_instruction
     )
 
     # Append new user prompt
