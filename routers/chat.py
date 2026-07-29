@@ -80,10 +80,10 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # An sauya zuwa gemini-1.5-flash domin kauce wa matsalar Quota Exceeded
+            # Amfani da gemini-2.5-flash dai-dai da account ɗinka
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
-                model='gemini-1.5-flash',
+                model='gemini-2.5-flash',
                 contents=gemini_contents,
                 config=config
             )
