@@ -46,22 +46,22 @@ async def log_live_audio(session_id: str, user_email: str, event: str):
 @router.websocket("/ws")
 async def live_audio_socket(websocket: WebSocket):
     await websocket.accept()
-    api_key = os.environ.get("GROQ_API_KEY")
+    api_key = os.environ.get("GEMINI_API_KEY")
     
     if not api_key:
-        await websocket.close(code=1008, reason="GROQ_API_KEY missing")
+        await websocket.close(code=1008, reason="GEMINI_API_KEY missing")
         return
         
     try:
-        await websocket.send_text("Fata AI Live Audio Stream Engine connected successfully.")
+        await websocket.send_text("Fata AI Live Stream Engine (Powered by Gemini) connected successfully.")
         
-        # Adana log din session a background don kar ya rage gudu (non-blocking)
-        asyncio.create_task(log_live_audio("live_session", "guest_user", "Live audio session started."))
+        # Adana log din session a background
+        asyncio.create_task(log_live_audio("live_session", "guest_user", "Live Gemini session started."))
         
         while True:
             data = await websocket.receive_bytes()
-            # Yana karbar bytes dinka ba tare da dakatar da WebSocket ba
-            asyncio.create_task(log_live_audio("live_session", "guest_user", f"Received {len(data)} bytes of audio data."))
+            # Karbar bytes ba tare da dakatar da WebSocket ba
+            asyncio.create_task(log_live_audio("live_session", "guest_user", f"Received {len(data)} bytes of streaming data."))
             
     except WebSocketDisconnect:
         print("⚡ Live Socket Client Disconnected gracefully.")

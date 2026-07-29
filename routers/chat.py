@@ -5,15 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
-from groq import AsyncGroq
+import google.generativeai as genai
 
 from core.security import get_current_user
 from core.database import get_chat_collection
 
 router = APIRouter(prefix="/chat", tags=["AI Chat Engine"])
 
-# Initialize Groq Client
-groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
+# Configure Google Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 class ChatRequest(BaseModel):
     message: str
@@ -30,51 +32,71 @@ async def stream_chat(
             detail="Message cannot be empty."
         )
 
+    if not GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GEMINI_API_KEY is not configured on the server."
+        )
+
     user_email = current_user.get("sub", "guest_user")
     session_id = req.session_id if req.session_id else "default_session"
 
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
-    history_messages = []
+    history_contents = []
     
     if chat_collection is not None:
         existing_chat = await chat_collection.find_one({"_id": session_id})
         if existing_chat and "messages" in existing_chat:
             for msg in existing_chat["messages"][-6:]:  # Keep last 6 context messages
-                history_messages.append({"role": msg["role"], "content": msg["content"]})
+                role = "user" if msg["role"] == "user" else "model"
+                history_contents.append({
+                    "role": role,
+                    "parts": [msg["content"]]
+                })
 
-    # System Instructions mai kyau
-    system_prompt = {
-        "role": "system",
-        "content": (
-            "Ni ne Fata AI, mataimakin mai amfani da ke amsa tambayoyi cikin hausa da turanci. "
-            "Yi amfani da kyakykyawan tsarin rubutu tare da sarari (spaces) tsakanin ko wace kalma."
-        )
-    }
+    # Add system instructions and current prompt
+    system_instruction = (
+        "Ni ne Fata AI, mataimakin mai amfani mai amfani da Gemini Engine. "
+        "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe da kiyaye sararin kalmomi (spaces)."
+    )
     
-    messages_payload = [system_prompt] + history_messages + [{"role": "user", "content": req.message.strip()}]
+    # Initialize Gemini Model with Search Grounding Enabled
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        system_instruction=system_instruction,
+        tools=[{"google_search": {}}]  # Enable Live Google Search Grounding!
+    )
+
+    # Append new user prompt
+    history_contents.append({
+        "role": "user",
+        "parts": [req.message.strip()]
+    })
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            stream = await groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages_payload,
+            # Generate content using Gemini Async Stream
+            response = await asyncio.to_thread(
+                model.generate_content,
+                history_contents,
                 stream=True
             )
 
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    text_chunk = chunk.choices[0].delta.content
+            for chunk in response:
+                if chunk.text:
+                    text_chunk = chunk.text
                     full_assistant_response += text_chunk
                     
-                    # Tura data a matsayin JSON string don kiyaye dukkan spaces & newlines
+                    # Send payload in JSON format to safeguard formatting/spaces
                     payload = json.dumps({"content": text_chunk})
                     yield f"data: {payload}\n\n"
+                    await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 
-            # Save to MongoDB
+            # Save chat to MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": req.message.strip()}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
@@ -90,7 +112,7 @@ async def stream_chat(
 
         except Exception as e:
             print(f"🚨 Streaming Error: {str(e)}")
-            err_payload = json.dumps({"content": f"⚠️ Kuskure: {str(e)}"})
+            err_payload = json.dumps({"content": f"⚠️ Kuskure daga Gemini Engine: {str(e)}"})
             yield f"data: {err_payload}\n\n"
             yield "data: [DONE]\n\n"
 
