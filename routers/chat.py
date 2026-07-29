@@ -5,17 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
-import google.generativeai as genai
+
+# Sabon SDK na Google GenAI
+from google import genai
+from google.genai import types
 
 from core.security import get_current_user
 from core.database import get_chat_collection
 
 router = APIRouter(prefix="/chat", tags=["AI Chat Engine"])
 
-# Configure Google Gemini
+# Configure Google Gemini Client
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 class ChatRequest(BaseModel):
     message: str
@@ -32,7 +34,7 @@ async def stream_chat(
             detail="Message cannot be empty."
         )
 
-    if not GEMINI_API_KEY:
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="GEMINI_API_KEY is not configured on the server."
@@ -43,52 +45,54 @@ async def stream_chat(
 
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
-    history_contents = []
+    gemini_contents = []
     
     if chat_collection is not None:
         existing_chat = await chat_collection.find_one({"_id": session_id})
         if existing_chat and "messages" in existing_chat:
             for msg in existing_chat["messages"][-6:]:  # Keep last 6 context messages
-                role = "user" if msg["role"] == "user" else "model"
-                history_contents.append({
-                    "role": role,
-                    "parts": [msg["content"]]
-                })
+                role_map = "user" if msg["role"] == "user" else "model"
+                gemini_contents.append(
+                    types.Content(
+                        role=role_map,
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    )
+                )
 
-    # Add system instructions and current prompt
+    # Add current prompt
+    gemini_contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=req.message.strip())]
+        )
+    )
+
+    # System instruction & Config
     system_instruction = (
         "Ni ne Fata AI, mataimakin mai amfani mai amfani da Gemini Engine. "
         "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe da kiyaye sararin kalmomi (spaces)."
     )
     
-    # An canza model_name zuwa gemini-2.5-flash wanda ke aiki da sabbin API keys
-    model = genai.GenerativeModel(
-        model_name='gemini-2.5-flash',
+    config = types.GenerateContentConfig(
         system_instruction=system_instruction
     )
-
-    # Append new user prompt
-    history_contents.append({
-        "role": "user",
-        "parts": [req.message.strip()]
-    })
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Generate content using Gemini Async Stream
-            response = await asyncio.to_thread(
-                model.generate_content,
-                history_contents,
-                stream=True
+            # Generate content stream using new SDK
+            response_stream = await asyncio.to_thread(
+                client.models.generate_content_stream,
+                model='gemini-2.5-flash',
+                contents=gemini_contents,
+                config=config
             )
 
-            for chunk in response:
+            for chunk in response_stream:
                 if chunk.text:
                     text_chunk = chunk.text
                     full_assistant_response += text_chunk
                     
-                    # Send payload in JSON format to safeguard formatting/spaces
                     payload = json.dumps({"content": text_chunk})
                     yield f"data: {payload}\n\n"
                     await asyncio.sleep(0.01)
