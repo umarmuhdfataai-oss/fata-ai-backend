@@ -76,15 +76,15 @@
             </div>
         </div>
 
-        <!-- AI Workspaces -->
+        <!-- AI Workspaces Switcher -->
         <div class="border-t border-[#282a2c] pt-4">
             <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">AI Workspaces</h2>
             <div class="space-y-2">
-                <div class="flex items-center space-x-3 p-2 rounded-xl bg-[#282a2c] cursor-pointer hover:bg-[#37393b] transition">
+                <div id="btnTabChat" onclick="switchMode('chat')" class="flex items-center space-x-3 p-2 rounded-xl bg-[#282a2c] text-white cursor-pointer hover:bg-[#37393b] transition">
                     <i class="fa-solid fa-comments text-blue-400"></i>
                     <span class="text-sm font-medium">Interactive AI Chat</span>
                 </div>
-                <div class="flex items-center space-x-3 p-2 rounded-xl hover:bg-[#282a2c] text-gray-400 cursor-pointer transition">
+                <div id="btnTabImage" onclick="switchMode('image')" class="flex items-center space-x-3 p-2 rounded-xl text-gray-400 cursor-pointer hover:bg-[#282a2c] transition">
                     <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
                     <span class="text-sm font-medium">Image Generation</span>
                 </div>
@@ -92,13 +92,13 @@
         </div>
     </aside>
 
-    <!-- MAIN CHAT CANVAS -->
+    <!-- MAIN CANVAS -->
     <main class="flex-1 flex flex-col justify-between h-full relative">
         
         <!-- TOP HEADER -->
         <header class="h-16 border-b border-[#282a2c] flex items-center justify-between px-6 bg-[#131314]/80 backdrop-blur">
             <div class="flex items-center space-x-2">
-                <span class="text-sm font-semibold text-gray-300">Gemini Engine</span>
+                <span id="headerModeTitle" class="text-sm font-semibold text-gray-300">Gemini Engine</span>
                 <span class="px-2 py-0.5 text-[10px] bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Live</span>
             </div>
             <div class="text-xs text-gray-400">
@@ -106,34 +106,60 @@
             </div>
         </header>
 
-        <!-- CHAT MESSAGES DISPLAY AREA -->
-        <div id="chatBox" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-            <!-- Greeting Message -->
-            <div class="flex items-start space-x-3 ai-msg p-4 max-w-2xl">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold shrink-0">
-                    AI
+        <!-- CHAT DISPLAY AREA -->
+        <div id="chatView" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 flex flex-col justify-between">
+            <div id="chatBox" class="space-y-6">
+                <div class="flex items-start space-x-3 ai-msg p-4 max-w-2xl">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold shrink-0">
+                        AI
+                    </div>
+                    <div>
+                        <p class="text-sm leading-relaxed">Barka da zuwa! Ni ne **Fata AI**. Yaya zan iya taimaka maka a yau?</p>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-sm leading-relaxed">Barka da zuwa! Ni ne **Fata AI**. Yaya zan iya taimaka maka a yau?</p>
+            </div>
+            
+            <!-- CHAT INPUT -->
+            <div class="p-4 bg-[#131314]">
+                <div class="max-w-4xl mx-auto">
+                    <form id="chatForm" onsubmit="handleSend(event)" class="relative flex items-center">
+                        <textarea id="messageInput" rows="1" placeholder="Rubuta saƙo zuwa Fata AI..." 
+                            class="w-full custom-input text-sm text-gray-200 rounded-2xl py-4 pl-5 pr-14 resize-none shadow-inner transition"
+                            onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); handleSend(event); }"></textarea>
+                        
+                        <button type="submit" class="absolute right-3 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition duration-200 shadow-md">
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- CHAT INPUT AREA -->
-        <div class="p-4 md:p-6 bg-[#131314]">
-            <div class="max-w-4xl mx-auto">
-                <form id="chatForm" onsubmit="handleSend(event)" class="relative flex items-center">
-                    <textarea id="messageInput" rows="1" placeholder="Rubuta saƙo zuwa Fata AI..." 
-                        class="w-full custom-input text-sm text-gray-200 rounded-2xl py-4 pl-5 pr-14 resize-none shadow-inner transition"
-                        onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); handleSend(event); }"></textarea>
-                    
-                    <button type="submit" id="sendBtn" class="absolute right-3 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition duration-200 shadow-md">
-                        <i class="fa-solid fa-paper-plane text-xs"></i>
-                    </button>
-                </form>
-                <p class="text-[11px] text-gray-500 text-center mt-2">
-                    Fata AI Ultra Core yana amfani da sabbin damar Gemini LLM.
-                </p>
+        <!-- IMAGE GENERATION DISPLAY AREA -->
+        <div id="imageView" class="flex-1 overflow-y-auto p-4 md:p-8 hidden flex flex-col justify-between">
+            <div class="max-w-3xl mx-auto w-full text-center space-y-6 my-auto">
+                <h2 class="text-2xl font-bold gemini-gradient-text">Fata AI Image Generator</h2>
+                <p class="text-sm text-gray-400">Rubuta bayanin hoton da kake son ƙirƙirawa (Prompt) a ƙasa.</p>
+
+                <!-- Output Image Container -->
+                <div id="imageResultContainer" class="min-h-[300px] w-full bg-[#1e1f20] rounded-2xl border border-[#282a2c] flex items-center justify-center overflow-hidden relative">
+                    <span id="imagePlaceholder" class="text-gray-500 text-sm">Hotonka zai bayyana a nan...</span>
+                    <img id="generatedImage" class="hidden w-full h-auto max-h-[450px] object-contain rounded-2xl" alt="Generated AI Image" />
+                </div>
+            </div>
+
+            <!-- IMAGE INPUT FORM -->
+            <div class="p-4 bg-[#131314] w-full">
+                <div class="max-w-4xl mx-auto">
+                    <form onsubmit="handleGenerateImage(event)" class="relative flex items-center">
+                        <input type="text" id="imagePromptInput" placeholder="Misali: Red vintage car driving in a desert during sunset..." 
+                            class="w-full custom-input text-sm text-gray-200 rounded-2xl py-4 pl-5 pr-14 shadow-inner transition" />
+                        
+                        <button type="submit" id="generateBtn" class="absolute right-3 w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center transition duration-200 shadow-md">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </main>
@@ -143,10 +169,34 @@
         const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
         let currentSessionId = "session_" + Math.random().toString(36).substring(2, 11);
         let userAuthToken = "";
+        let currentMode = "chat";
 
         document.getElementById("sessionIdDisplay").value = currentSessionId;
 
-        // Automatically authenticate guest user on load
+        // Toggle Modes
+        function switchMode(mode) {
+            currentMode = mode;
+            const chatView = document.getElementById("chatView");
+            const imageView = document.getElementById("imageView");
+            const btnTabChat = document.getElementById("btnTabChat");
+            const btnTabImage = document.getElementById("btnTabImage");
+            const headerTitle = document.getElementById("headerModeTitle");
+
+            if (mode === 'chat') {
+                chatView.classList.remove("hidden");
+                imageView.classList.add("hidden");
+                btnTabChat.className = "flex items-center space-x-3 p-2 rounded-xl bg-[#282a2c] text-white cursor-pointer hover:bg-[#37393b] transition";
+                btnTabImage.className = "flex items-center space-x-3 p-2 rounded-xl text-gray-400 cursor-pointer hover:bg-[#282a2c] transition";
+                headerTitle.innerText = "Gemini Engine";
+            } else {
+                chatView.classList.add("hidden");
+                imageView.classList.remove("hidden");
+                btnTabImage.className = "flex items-center space-x-3 p-2 rounded-xl bg-[#282a2c] text-white cursor-pointer hover:bg-[#37393b] transition";
+                btnTabChat.className = "flex items-center space-x-3 p-2 rounded-xl text-gray-400 cursor-pointer hover:bg-[#282a2c] transition";
+                headerTitle.innerText = "Fata Image Generator";
+            }
+        }
+
         async function initializeAuth() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/v2/auth/guest`, { method: "POST" });
@@ -164,7 +214,6 @@
             } catch (err) {
                 document.getElementById("backendStatus").innerText = "Error";
                 document.getElementById("backendStatus").className = "text-red-400 font-semibold";
-                console.error(err);
                 return false;
             }
         }
@@ -184,45 +233,28 @@
             `;
         }
 
+        // --- CHAT SYSTEM STREAMING ---
         async function handleSend(e) {
             e.preventDefault();
             const inputField = document.getElementById("messageInput");
             const userMsg = inputField.value.trim();
             if (!userMsg) return;
 
-            // Idan babu token, nema yanzu kafin aikawa
-            if (!userAuthToken) {
-                const authed = await initializeAuth();
-                if (!authed) {
-                    alert("Akwai matsalar haɗawa da Backend!");
-                    return;
-                }
-            }
+            if (!userAuthToken) await initializeAuth();
 
             inputField.value = "";
             const chatBox = document.getElementById("chatBox");
 
-            // 1. Render User Message
             const userDiv = document.createElement("div");
             userDiv.className = "flex justify-end mb-4";
-            userDiv.innerHTML = `
-                <div class="user-msg p-4 max-w-xl text-sm leading-relaxed shadow">
-                    ${escapeHtml(userMsg)}
-                </div>
-            `;
+            userDiv.innerHTML = `<div class="user-msg p-4 max-w-xl text-sm leading-relaxed shadow">${escapeHtml(userMsg)}</div>`;
             chatBox.appendChild(userDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
 
-            // 2. Render AI Empty Bubble
             const aiDiv = document.createElement("div");
             aiDiv.className = "flex items-start space-x-3 ai-msg p-4 max-w-2xl mb-4";
             aiDiv.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold shrink-0">
-                    AI
-                </div>
-                <div class="text-sm leading-relaxed whitespace-pre-wrap ai-container">
-                    <span class="animate-pulse text-gray-400">Yana tunani...</span>
-                </div>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+                <div class="text-sm leading-relaxed whitespace-pre-wrap ai-container"><span class="animate-pulse text-gray-400">Yana tunani...</span></div>
             `;
             chatBox.appendChild(aiDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -232,54 +264,83 @@
             try {
                 let response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${userAuthToken}`
-                    },
-                    body: JSON.stringify({
-                        message: userMsg,
-                        session_id: currentSessionId
-                    })
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userAuthToken}` },
+                    body: JSON.stringify({ message: userMsg, session_id: currentSessionId })
                 });
 
-                // Idan token ya mutu (401), sake sabunta shi kuma a sake aikawa
-                if (response.status === 401) {
-                    const refreshed = await initializeAuth();
-                    if (refreshed) {
-                        response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${userAuthToken}`
-                            },
-                            body: JSON.stringify({
-                                message: userMsg,
-                                session_id: currentSessionId
-                            })
-                        });
-                    }
-                }
-
                 if (!response.ok) {
-                    aiTextElement.innerHTML = `<span class="text-red-400">⚠️ Kuskure daga Backend (${response.status} ${response.statusText})</span>`;
+                    aiTextElement.innerHTML = `<span class="text-red-400">⚠️ Kuskure daga Backend (${response.status})</span>`;
                     return;
                 }
 
-                // Stream response reading
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
                 aiTextElement.innerHTML = "";
+                let buffer = "";
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    aiTextElement.innerText += chunk;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
 
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const dataText = line.replace(/^data:\s*/, "");
+                            if (dataText === "[DONE]") continue;
+                            aiTextElement.innerText += dataText.replace(/\\n/g, "\n");
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    }
+                }
             } catch (err) {
                 aiTextElement.innerHTML = `<span class="text-red-400">⚠️ An samu matsalar haɗi: ${err.message}</span>`;
+            }
+        }
+
+        // --- IMAGE GENERATION SYSTEM ---
+        async function handleGenerateImage(e) {
+            e.preventDefault();
+            const promptInput = document.getElementById("imagePromptInput");
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            const placeholder = document.getElementById("imagePlaceholder");
+            const imgElement = document.getElementById("generatedImage");
+
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-purple-400 text-2xl mb-2 block"></i> Yana ƙirƙirar hotonku, dakata kaɗan...`;
+            placeholder.classList.remove("hidden");
+            imgElement.classList.add("hidden");
+
+            try {
+                // Idan kana da backend endpoint na image generation, aikawa anan:
+                const res = await fetch(`${API_BASE_URL}/api/v2/image/generate`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${userAuthToken}`
+                    },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    // Assuming backend returns { image_url: "..." }
+                    imgElement.src = data.image_url;
+                } else {
+                    // Fallback to direct client-side generation (Pollinations AI) if backend endpoint is not yet created
+                    const encodedPrompt = encodeURIComponent(prompt);
+                    imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=800&height=600&nologo=true`;
+                }
+
+                imgElement.onload = () => {
+                    placeholder.classList.add("hidden");
+                    imgElement.classList.remove("hidden");
+                };
+
+            } catch (err) {
+                placeholder.innerHTML = `<span class="text-red-400">⚠️ An samu kuskure wajen haɗawa.</span>`;
             }
         }
 
@@ -287,7 +348,6 @@
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
 
-        // Initialize system on page load
         initializeAuth();
     </script>
 </body>
