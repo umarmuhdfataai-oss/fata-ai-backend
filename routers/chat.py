@@ -61,9 +61,9 @@ async def stream_chat(
         "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe da kiyaye sararin kalmomi (spaces)."
     )
     
-    # Initialize Gemini Model (An gyara ta yadda ba za ta nemi google_search ba)
+    # An canza model_name zuwa gemini-2.5-flash wanda ke aiki da sabbin API keys
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
+        model_name='gemini-2.5-flash',
         system_instruction=system_instruction
     )
 
