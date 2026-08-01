@@ -1,16 +1,16 @@
 import os
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks
-from google import genai
+from groq import Groq
 
 from core.database import get_chat_collection
 from core.security import get_current_user
 
 router = APIRouter(prefix="/files", tags=["File Processing Engine"])
 
-# Configure Gemini Client
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+# Configure Groq Client
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 async def log_file_upload(session_id: str, user_email: str, file_info: dict):
     """
@@ -30,8 +30,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         history.append({"role": "user", "content": f"Uploaded file: {file_info['file_name']}"})
         history.append({
             "role": "system",
-            "content": "[File Uploaded & Processed via Gemini]",
-            "file_uri": file_info.get("file_uri"),
+            "content": "[File Uploaded & Processed via Groq Engine]",
             "file_name": file_info["file_name"],
             "mime_type": file_info["mime_type"]
         })
@@ -53,7 +52,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         print(f"🚨 File DB Log Failure: {str(e)}")
 
 @router.post("/upload")
-async def upload_file_to_gemini(
+async def upload_file_to_groq(
     file: UploadFile = File(...),
     session_id: str = Form("default_session"),
     background_tasks: BackgroundTasks = None,
@@ -64,31 +63,15 @@ async def upload_file_to_gemini(
         if not client:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="GEMINI_API_KEY variable is unconfigured."
+                detail="GROQ_API_KEY variable is unconfigured."
             )
 
         # Adana fayil a local temporary storage
         with open(temp_file_path, "wb") as f:
             f.write(await file.read())
 
-        try:
-            # Upload file zuwa Google Gemini Files API ta amfani da sabon client
-            uploaded_file = client.files.upload(file=temp_file_path)
-        except Exception as primary_err:
-            print(f"⚠️ Primary Gemini upload error: {str(primary_err)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Gemini File upload failed: {str(primary_err)}"
-            )
-        finally:
-            # Goge temporary file daga uwar garke (server)
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
-
         file_info = {
             "file_name": file.filename,
-            "file_uri": getattr(uploaded_file, "uri", ""),
-            "file_name_gemini": getattr(uploaded_file, "name", ""),
             "mime_type": file.content_type or "application/octet-stream"
         }
 
@@ -98,7 +81,7 @@ async def upload_file_to_gemini(
 
         return {
             "status": "success",
-            "engine": "Gemini File Processing",
+            "engine": "Groq File Processing Engine",
             **file_info
         }
 
