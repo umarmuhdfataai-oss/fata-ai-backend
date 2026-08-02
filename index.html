@@ -610,14 +610,19 @@
             resultsList.innerHTML = "";
 
             const filtered = history.filter(h => h.title.toLowerCase().includes(query));
+            
+            if (filtered.length === 0) {
+                resultsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">Babu tattaunawar da ta dace da bincikenku.</p>`;
+                return;
+            }
+
             filtered.forEach(item => {
                 const div = document.createElement("div");
-                div.className = "p-2.5 rounded-xl hover:bg-[#282a2c] cursor-pointer text-xs text-gray-300 transition";
-                div.innerText = item.title;
-                div.onclick = () => {
-                    loadChatSession(item.id);
-                    closeSearchModal();
-                };
+                div.className = "p-3 hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 transition flex items-center justify-between";
+                div.innerHTML = `
+                    <span onclick="loadChatSession('${item.id}'); closeSearchModal();" class="truncate flex-1">${escapeHtml(item.title)}</span>
+                    <i class="fa-solid fa-arrow-right text-gray-500"></i>
+                `;
                 resultsList.appendChild(div);
             });
         }
@@ -633,16 +638,23 @@
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        function copyToClipboard(btn) {
-            const contentDiv = btn.closest('.space-y-2').querySelector('.ai-content');
-            navigator.clipboard.writeText(contentDiv.innerText);
-            const originalIcon = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
-            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
+        function copyToClipboard(button) {
+            const contentDiv = button.closest('.space-y-2').querySelector('.ai-content');
+            const textToCopy = contentDiv.innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalIcon = button.innerHTML;
+                button.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+                setTimeout(() => {
+                    button.innerHTML = originalIcon;
+                }, 2000);
+            });
         }
 
-        renderHistory();
-        initializeAuth();
+        // Initialize history and authentication on load
+        window.onload = () => {
+            renderHistory();
+            initializeAuth();
+        };
     </script>
 </body>
 </html>

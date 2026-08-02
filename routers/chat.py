@@ -27,7 +27,7 @@ class ChatRequest(BaseModel):
 async def fetch_tavily_search(query: str) -> str:
     if not TAVILY_API_KEY:
         return ""
-    
+     
     url = "https://api.tavily.com/search"
     payload = {
         "api_key": TAVILY_API_KEY,
@@ -36,7 +36,7 @@ async def fetch_tavily_search(query: str) -> str:
         "max_results": 3,
         "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com"]
     }
-    
+     
     try:
         async with httpx.AsyncClient(timeout=10.0) as httpx_client:
             response = await httpx_client.post(url, json=payload)
@@ -70,7 +70,7 @@ async def stream_chat(
 
     web_search_context = await fetch_tavily_search(f"Final result of {user_query} in 2026 season")
     chat_collection = get_chat_collection()
-    
+     
     system_instruction = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
         "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
@@ -109,10 +109,10 @@ async def stream_chat(
                 temperature=0.3,
             )
 
-            # Anan mun gyara sunan samfurin zuwa gemini-3.6-flash daidai da sabon SDK
+            # Anan mun yi amfani da gemini-2.5-flash ko gemini-2.5-pro wanda yake da tsayayyen aiki a yanzu
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
-                model="gemini-3.6-flash",
+                model="gemini-2.5-flash",
                 contents=contents_history,
                 config=config
             )
