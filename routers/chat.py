@@ -1,7 +1,6 @@
 import json
 import asyncio
 import os
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -15,7 +14,6 @@ from core.database import get_chat_collection
 router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
@@ -23,35 +21,6 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     model: Optional[str] = "gemini-3.6-flash"
-
-async def fetch_tavily_search(query: str) -> str:
-    if not TAVILY_API_KEY:
-        return ""
-     
-    url = "https://api.tavily.com/search"
-    payload = {
-        "api_key": TAVILY_API_KEY,
-        "query": query,
-        "search_depth": "advanced",
-        "max_results": 4,
-        "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com", "en.wikipedia.org"]
-    }
-     
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as httpx_client:
-            response = await httpx_client.post(url, json=payload)
-            if response.status_code == 200:
-                data = response.json()
-                results = data.get("results", [])
-                snippets = []
-                for res in results:
-                    if res.get("content"):
-                        snippets.append(f"[{res.get('date', 'N/A')}]: {res.get('content')}")
-                if snippets:
-                    return "\n".join(snippets)
-    except Exception as e:
-        print(f"⚠️ Tavily Search Error: {str(e)}")
-    return ""
 
 @router.post("/stream")
 async def stream_chat(
@@ -67,23 +36,17 @@ async def stream_chat(
     user_email = current_user.get("sub", "guest_user")
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
-
-    # 1. Yi bincike ta Tavily da farko domin tabbatar da an samu sabbin bayananan 2026
-    web_search_context = await fetch_tavily_search(user_query)
       
     system_prompt = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
-        "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
-        "Yanzu muna cikin shekara ta 2026. Ka guji amfani da tsoffin bayanai idan akwai sababbi a cikin bayanan intanet da aka ba ka."
+        "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar yadda Gemini yake yi. "
+        "Yanzu muna cikin shekara ta 2026."
     )
-
-    if web_search_context:
-        system_prompt += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet na 2026]: \n{web_search_context}"
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # An sabunta zuwa samfuran Gemini
+            # Amfani da sahihin samfuran Gemini 3.6
             target_model = "gemini-3.6-flash"
             if req.model and "pro" in req.model.lower():
                 target_model = "gemini-3.6-pro"
