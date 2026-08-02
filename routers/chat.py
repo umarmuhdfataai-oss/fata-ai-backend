@@ -17,7 +17,6 @@ router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-# Fara ainihin Google GenAI Client
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 class ChatRequest(BaseModel):
@@ -47,12 +46,10 @@ async def fetch_tavily_search(query: str) -> str:
                 for res in results:
                     if res.get("content"):
                         snippets.append(f"[{res.get('date', 'N/A')}]: {res.get('content')}")
-                
                 if snippets:
                     return "\n".join(snippets)
     except Exception as e:
         print(f"⚠️ Tavily Search Error: {str(e)}")
-        
     return ""
 
 @router.post("/stream")
@@ -70,12 +67,9 @@ async def stream_chat(
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    # Binciko intanet domin samun ingantattun bayanai
     web_search_context = await fetch_tavily_search(f"Final result of {user_query} in 2026 season")
-
     chat_collection = get_chat_collection()
     
-    # Tsarin umarni na musamman don Gemini
     system_instruction = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
         "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
@@ -86,7 +80,6 @@ async def stream_chat(
     if web_search_context:
         system_instruction += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
 
-    # Gina tarihin tattaunawa (History) daga MongoDB
     contents_history = []
     if chat_collection is not None:
         existing_chat = await chat_collection.find_one({"_id": session_id})
@@ -100,7 +93,6 @@ async def stream_chat(
                     )
                 )
 
-    # Saka sabon saƙon mai amfani a ƙarshe
     contents_history.append(
         types.Content(
             role="user",
@@ -116,7 +108,7 @@ async def stream_chat(
                 temperature=0.3,
             )
 
-            # An mayar da model zuwa gemini-1.5-flash wanda shine ainihin wanda yake aiki a halin yanzu
+            # An saita model ta yadda zata yi amfani da daidaitaccen suna mai wucewa ta API
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
                 model="gemini-1.5-flash",
@@ -134,7 +126,6 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Adana tattaunawar a MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
