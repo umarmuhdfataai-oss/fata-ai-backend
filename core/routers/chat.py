@@ -42,8 +42,7 @@ async def stream_chat(
         "TSARIN AMSA SAKO (INSTRUCTIONS):\n"
         "1. Yi amfani da dukkan bayanan da ke cikin tarihin tattaunawarku da mai amfani don ba da amsa mai kyau.\n"
         "2. Idan mai amfani ya tura hoto ko fayil, bincika hoton da kyau sannan ka ba da bayani a kansa.\n"
-        "3. Idan an yi tambaya game da abubuwan da ke faruwa a duniyar yanzu (kamar wasanni, labarai, siyasa), "
-        "KOYAUSHE yi amfani da kayan bincike na Google Search don gano ainihin abin da ke faruwa a shekarar 2026.\n"
+        "3. Idan an yi tambaya game da abubuwan da ke faruwa a duniyar yanzu, yi amfani da kayan bincike don gano ainihin abin da ke faruwa.\n"
         "4. Amsa cikin harshen Hausa mai daɗi, inganci, fahimta, da girmamawa."
     )
 
@@ -84,9 +83,8 @@ async def stream_chat(
 
             history_contents.append(types.Content(role="user", parts=current_user_parts))
 
-            # 3. Kayan Bincike na Google Search & Code Execution
-            search_tool = types.Tool(google_search=types.GoogleSearch())
-            code_exec_tool = types.Tool(code_execution=types.CodeExecution())
+            # 3. Kayan Bincike na Google Search (Correct Syntax)
+            tools_list = [{"google_search": {}}, {"code_execution": {}}]
 
             # 4. Aika saƙo ta hanyar Async Stream
             response = await client.aio.models.generate_content_stream(
@@ -95,7 +93,7 @@ async def stream_chat(
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.4,
-                    tools=[search_tool, code_exec_tool]
+                    tools=tools_list
                 )
             )
 
