@@ -11,4 +11,3 @@ pydantic[email]>=2.6.4
 email-validator>=2.1.0
 websockets>=12.0
 httpx>=0.25.0
-beautifulsoup4>=4.12.0

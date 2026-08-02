@@ -1,6 +1,7 @@
 import json
 import asyncio
 import os
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -14,13 +15,45 @@ from core.database import get_chat_collection
 
 router = APIRouter(prefix="/chat", tags=["AI Chat Engine"])
 
-# Configure Groq Client
+# Configure Clients
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+
+async def fetch_tavily_search(query: str) -> str:
+    """
+    Shiga intanet ta amfani da Tavily Search API domin nemo cikakkun bayanai na yanzu (Real-time Grounding).
+    """
+    if not TAVILY_API_KEY:
+        return ""
+    
+    url = "https://api.tavily.com/search"
+    payload = {
+        "api_key": TAVILY_API_KEY,
+        "query": query,
+        "search_depth": "advanced",
+        "max_results": 3
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as httpx_client:
+            response = await httpx_client.post(url, json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get("results", [])
+                snippets = [res.get("content", "") for res in results if res.get("content")]
+                if snippets:
+                    print(f"🔍 Tavily Search Success for: '{query}'")
+                    return "\n".join(snippets)
+    except Exception as e:
+        print(f"⚠️ Tavily Search Error: {str(e)}")
+        
+    return ""
 
 @router.post("/stream")
 async def stream_chat(
@@ -44,16 +77,24 @@ async def stream_chat(
 
     user_query = req.message.strip()
 
+    # 1. Binciko Intanet kai tsaye (Real-time Web Search)
+    web_search_context = await fetch_tavily_search(user_query)
+
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
     
-    # Tsabtatacciyar System Instruction mai bai wa Fata AI 'yanci da kuma wayewa irin ta Gemini
+    # 2. Tsara System Instruction wacce ke ba da izinin amfani da sakamakon intanet
     system_instruction = (
         "Sunanka Fata AI, babban mataimakin fasaha mai amfani da Groq LPU Engine. "
-        "Amsa duk tambayoyin da masu amfani suka yi muku cikin harshen Hausa ko Turanci mafi inganci da fahimta. "
-        "Ka zama mai zurfin ilimi kan harkokin duniya, tarihi, wasanni, da fasaha. "
-        "Yanzu muna cikin shekara ta 2026. Ka kasance mai bada amsoshi masu fadi, da tsari mai kyau (misali amfani da bullet points ko lambobi idan ya dace)."
+        "Amsa duk tambayoyi cikin harshen Hausa ko Turanci gwargwadon yadda aka tambaye ka, cikin hikima, sauri, da cikakken bayani kamar Gemini. "
+        "Yanzu muna cikin shekara ta 2026. "
+        "Idan aka ba ka bayanan intanet (Web Search Results) a ƙasa, dole ne ka yi amfani da su wajen bada ingantacciyar amsa ta yanzu:"
     )
+
+    if web_search_context:
+        system_instruction += f"\n\n[Web Search Results / Sabbin Bayanai na Intanet]:\n{web_search_context}"
+    else:
+        system_instruction += "\n\n[Babu takamaiman sabon bayanin intanet da aka samo, yi amfani da iliminka na asali tare da girmama lokacin yanzu na 2026]."
 
     messages = [
         {
