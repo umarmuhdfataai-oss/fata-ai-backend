@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from google import genai
+from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
@@ -80,26 +81,25 @@ async def stream_chat(
     if web_search_context:
         system_prompt += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
 
-    full_input_text = f"{system_prompt}\n\nUser Query: {user_query}"
-
     async def event_generator():
         full_assistant_response = ""
         try:
-            interaction = await asyncio.to_thread(
-                client.interactions.create,
+            # Amfani da daidaitaccen tsarin gemini-3.6-flash na backend ɗinka
+            response = await asyncio.to_thread(
+                client.models.generate_content_stream,
                 model="gemini-3.6-flash",
-                input=full_input_text
+                contents=user_query,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.7,
+                )
             )
 
-            response_text = interaction.output_text if interaction and interaction.output_text else "Babu amsa."
-            full_assistant_response = response_text
-
-            chunk_size = 20
-            for i in range(0, len(response_text), chunk_size):
-                text_chunk = response_text[i:i + chunk_size]
-                payload = json.dumps({"content": text_chunk})
-                yield f"data: {payload}\n\n"
-                await asyncio.sleep(0.01)
+            for chunk in response:
+                if chunk.text:
+                    full_assistant_response += chunk.text
+                    payload = json.dumps({"content": chunk.text})
+                    yield f"data: {payload}\n\n"
 
             yield "data: [DONE]\n\n"
 

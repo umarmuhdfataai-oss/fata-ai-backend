@@ -167,7 +167,7 @@
                 </button>
                 <div class="flex items-center space-x-2">
                     <span id="currentWorkspaceTitle" class="text-base font-semibold text-gray-200">Fata AI Ultra Core</span>
-                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium" id="selectedModelBadge">Gemini 2.5 Flash</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium" id="selectedModelBadge">Gemini 3.6 Flash</span>
                 </div>
             </div>
 
@@ -243,16 +243,16 @@
                 <!-- Model Selector Dropdown -->
                 <div class="relative shrink-0">
                     <button type="button" onclick="toggleModelDropdown()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#131314] border border-[#3c4043] text-xs font-medium text-gray-300 hover:bg-[#282a2c] transition">
-                        <span id="selectedModelText">Gemini 2.5</span>
+                        <span id="selectedModelText">Gemini 3.6</span>
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
                     <div id="modelDropdown" class="hidden absolute bottom-12 right-0 w-48 bg-[#1e1f20] border border-[#3c4043] rounded-2xl shadow-2xl z-40 py-1.5 text-xs overflow-hidden">
-                        <div onclick="selectModel('Gemini 2.5 Flash', 'Gemini 2.5')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
-                            <span>Gemini 2.5 Flash</span>
+                        <div onclick="selectModel('Gemini 3.6 Flash', 'Gemini 3.6')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                            <span>Gemini 3.6 Flash</span>
                             <i class="fa-solid fa-bolt text-blue-400"></i>
                         </div>
-                        <div onclick="selectModel('Gemini 2.5 Pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
-                            <span>Gemini 2.5 Pro</span>
+                        <div onclick="selectModel('Gemini 3.6 Pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                            <span>Gemini 3.6 Pro</span>
                             <i class="fa-solid fa-brain text-purple-400"></i>
                         </div>
                     </div>
@@ -296,7 +296,7 @@
         let userAuthToken = "";
         let currentMode = "chat";
         let attachedFile = null;
-        let activeModel = "gemini-2.5-flash";
+        let activeModel = "gemini-3.6-flash";
         let isRecording = false;
 
         function generateSessionId() {
@@ -391,13 +391,11 @@
 
             saveToHistory(currentSessionId, message);
 
-            // User Message Bubble
             const userBubble = document.createElement("div");
             userBubble.className = "flex justify-end my-4 animate-fadeIn";
             userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed shadow-sm">${escapeHtml(message)}</div>`;
             chatContainer.appendChild(userBubble);
 
-            // AI Response Bubble
             const aiBubble = document.createElement("div");
             aiBubble.className = "flex items-start space-x-3 my-4 animate-fadeIn";
             aiBubble.innerHTML = `
@@ -530,10 +528,10 @@
         }
 
         function selectModel(modelName, badgeText) {
-            if(badgeText === 'Gemini 2.5') {
-                activeModel = "gemini-2.5-flash";
+            if(badgeText === 'Gemini 3.6') {
+                activeModel = "gemini-3.6-flash";
             } else {
-                activeModel = "gemini-2.5-pro";
+                activeModel = "gemini-3.6-pro";
             }
             document.getElementById("selectedModelText").innerText = badgeText;
             document.getElementById("selectedModelBadge").innerText = modelName;
@@ -610,19 +608,14 @@
             resultsList.innerHTML = "";
 
             const filtered = history.filter(h => h.title.toLowerCase().includes(query));
-            
-            if (filtered.length === 0) {
-                resultsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">Babu tattaunawar da ta dace da bincikenku.</p>`;
-                return;
-            }
-
             filtered.forEach(item => {
                 const div = document.createElement("div");
-                div.className = "p-3 hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 transition flex items-center justify-between";
-                div.innerHTML = `
-                    <span onclick="loadChatSession('${item.id}'); closeSearchModal();" class="truncate flex-1">${escapeHtml(item.title)}</span>
-                    <i class="fa-solid fa-arrow-right text-gray-500"></i>
-                `;
+                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 transition";
+                div.innerText = item.title;
+                div.onclick = () => {
+                    loadChatSession(item.id);
+                    closeSearchModal();
+                };
                 resultsList.appendChild(div);
             });
         }
@@ -638,23 +631,17 @@
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        function copyToClipboard(button) {
-            const contentDiv = button.closest('.space-y-2').querySelector('.ai-content');
-            const textToCopy = contentDiv.innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const originalIcon = button.innerHTML;
-                button.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
-                setTimeout(() => {
-                    button.innerHTML = originalIcon;
-                }, 2000);
-            });
+        function copyToClipboard(btn) {
+            const contentDiv = btn.closest('.space-y-2').querySelector('.ai-content');
+            navigator.clipboard.writeText(contentDiv.innerText);
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
         }
 
-        // Initialize history and authentication on load
-        window.onload = () => {
-            renderHistory();
-            initializeAuth();
-        };
+        // Initialize history on load
+        renderHistory();
+        initializeAuth();
     </script>
 </body>
 </html>
