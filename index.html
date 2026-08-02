@@ -62,7 +62,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
-        /* Markdown Styling Enhancements */
         .ai-content pre {
             background-color: #131314;
             padding: 12px;
@@ -88,7 +87,6 @@
     <!-- SIDEBAR -->
     <aside id="mainSidebar" class="sidebar w-72 flex flex-col justify-between p-3 border-r border-[#282a2c] z-30 shrink-0 relative">
         <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
-            <!-- Sidebar Header -->
             <div class="flex items-center justify-between px-2 pt-2">
                 <div class="flex items-center space-x-2">
                     <button onclick="toggleSidebar()" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Rufe Menu">
@@ -185,15 +183,13 @@
             </div>
 
             <div class="flex items-center space-x-3">
-                <!-- Share / Export Chat Button -->
                 <button onclick="shareCurrentChat()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-gray-300 border border-[#3c4043] text-xs font-medium transition" title="Raba Tattaunawa">
                     <i class="fa-solid fa-share-nodes text-gray-400"></i>
                     <span>Raba</span>
                 </button>
-                <!-- Upgrade / Status Pill Button -->
-                <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
+                <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini 3.6 mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
                     <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
-                    <span>Gemini Engine Active</span>
+                    <span>Gemini 3.6 Active</span>
                 </button>
             </div>
         </header>
@@ -269,14 +265,11 @@
             </div>
 
             <form id="inputForm" onsubmit="handleFormSubmit(event)" class="custom-input-bar p-2.5 flex items-center space-x-2">
-                
-                <!-- Plus Button (Attach File) -->
                 <label for="fileUploadInput" class="p-2.5 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white cursor-pointer transition shrink-0" title="Saka Fayil ko Hoto">
                     <i class="fa-solid fa-plus text-base"></i>
                     <input type="file" id="fileUploadInput" class="hidden" onchange="handleFileUpload(event)">
                 </label>
 
-                <!-- Text Input -->
                 <input type="text" id="userInput" placeholder="Rubuta saƙonki ko tambaya a nan..." autocomplete="off"
                        class="flex-1 bg-transparent text-gray-200 text-sm focus:outline-none px-2 placeholder-gray-500">
 
@@ -287,11 +280,11 @@
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
                     <div id="modelDropdown" class="hidden absolute bottom-12 right-0 w-48 bg-[#1e1f20] border border-[#3c4043] rounded-2xl shadow-2xl z-40 py-1.5 text-xs overflow-hidden">
-                        <div onclick="selectModel('Gemini 3.6 Flash', 'Gemini 3.6')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                        <div onclick="selectModel('gemini-3.6-flash', 'Gemini 3.6')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
                             <span>Gemini 3.6 Flash</span>
                             <i class="fa-solid fa-bolt text-blue-400"></i>
                         </div>
-                        <div onclick="selectModel('Gemini 3.6 Pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                        <div onclick="selectModel('gemini-3.6-pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
                             <span>Gemini 3.6 Pro</span>
                             <i class="fa-solid fa-brain text-purple-400"></i>
                         </div>
@@ -312,7 +305,6 @@
                 Fata AI na iya tafka kuskure. Tabbatar da ingancin mahimman bayanai.
             </p>
         </div>
-
     </main>
 
     <!-- SEARCH CHATS MODAL -->
@@ -348,6 +340,21 @@
                     <button onclick="clearAllHistory()" class="px-3 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30">Goge Dukka</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- HELP MODAL -->
+    <div id="helpModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-regular fa-circle-question text-blue-400"></i> Taimako (Help)
+                </h3>
+                <button onclick="closeHelpModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+                Fata AI Ultra Core ta dogara ne da tsarin Google Gemini 3.6. Zaka iya tattaunawa da ita cikin harshen Hausa ko Turanci, ƙirƙirar hotuna, ko yin amfani da Gems na musamman don sauƙaƙe aikinka.
+            </p>
         </div>
     </div>
 
@@ -388,7 +395,7 @@
 
             if (mode === 'chat') {
                 document.getElementById("navChat").classList.add("active");
-                title.innerText = "Interactive Gemini Chat";
+                title.innerText = "Interactive Gemini 3.6 Chat";
                 if (chatContainer.children.length > 0) {
                     chatContainer.classList.remove("hidden");
                 } else {
@@ -471,7 +478,7 @@
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">✨</div>
                 <div class="space-y-2 max-w-3xl w-full">
                     <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed ai-content shadow-sm">
-                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini yana saurin rubuta amsa...</span>
+                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini 3.6 yana saurin rubuta amsa...</span>
                     </div>
                     <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
                         <button onclick="copyToClipboard(this)" class="hover:text-white transition" title="Kwafi"><i class="fa-regular fa-copy"></i></button>
@@ -487,7 +494,7 @@
             const aiContent = aiBubble.querySelector(".ai-content");
 
             try {
-                let response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
+                let response = await fetch(`${API_BASE_URL}/chat/stream`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userAuthToken}` },
                     body: JSON.stringify({ message: message, session_id: currentSessionId, model: activeModel })
@@ -561,156 +568,86 @@
         function toggleVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                alert("Browser ɗinka bata goyon bayan tsarin magana zuwa rubutu (Speech Recognition).");
+                alert("Browser ɗinka ba ta goyan bayan fassarar murzu zuwa rubutu ba (Speech Recognition).");
                 return;
             }
-
             const recognition = new SpeechRecognition();
-            recognition.lang = 'ha-NG'; // Hausa language support
-            const micBtn = document.getElementById("micBtn");
-
-            if (!isRecording) {
-                recognition.start();
-                isRecording = true;
-                micBtn.classList.add("text-red-500", "animate-pulse");
-
-                recognition.onresult = (event) => {
-                    const speechToText = event.results[0][0].transcript;
-                    document.getElementById("userInput").value = speechToText;
-                };
-
-                recognition.onerror = () => {
-                    isRecording = false;
-                    micBtn.classList.remove("text-red-500", "animate-pulse");
-                };
-
-                recognition.onend = () => {
-                    isRecording = false;
-                    micBtn.classList.remove("text-red-500", "animate-pulse");
-                };
-            }
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            attachedFile = file;
-            document.getElementById("attachmentName").innerText = file.name;
-            document.getElementById("attachmentPreview").classList.remove("hidden");
-            document.getElementById("attachmentPreview").classList.add("flex");
-        }
-
-        function removeAttachment() {
-            attachedFile = null;
-            document.getElementById("fileUploadInput").value = "";
-            document.getElementById("attachmentPreview").classList.remove("flex");
-            document.getElementById("attachmentPreview").classList.add("hidden");
+            recognition.lang = 'ha-NE'; // Hausa language
+            recognition.onstart = () => {
+                document.getElementById("micBtn").classList.add("text-red-500", "animate-pulse");
+            };
+            recognition.onresult = (event) => {
+                const speechToText = event.results[0][0].transcript;
+                document.getElementById("userInput").value = speechToText;
+            };
+            recognition.onerror = () => {
+                document.getElementById("micBtn").classList.remove("text-red-500", "animate-pulse");
+            };
+            recognition.onend = () => {
+                document.getElementById("micBtn").classList.remove("text-red-500", "animate-pulse");
+            };
+            recognition.start();
         }
 
         function toggleModelDropdown() {
             document.getElementById("modelDropdown").classList.toggle("hidden");
         }
 
-        function selectModel(displayName, apiName) {
-            activeModel = apiName;
-            document.getElementById("selectedModelText").innerText = displayName.split(" ")[1] || displayName;
-            document.getElementById("selectedModelBadge").innerText = displayName;
+        function selectModel(modelId, modelName) {
+            activeModel = modelId;
+            document.getElementById("selectedModelText").innerText = modelName;
+            document.getElementById("selectedModelBadge").innerText = "Gemini 3.6 " + (modelId.includes("pro") ? "Pro" : "Flash");
             toggleModelDropdown();
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById("mainSidebar");
-            sidebar.classList.toggle("hidden");
-        }
-
-        function openSearchModal() {
-            document.getElementById("searchModal").classList.remove("hidden");
-            loadChatsHistoryToList();
-        }
-
-        function closeSearchModal() {
-            document.getElementById("searchModal").classList.add("hidden");
-        }
-
-        function openSettingsModal() {
-            document.getElementById("settingsModal").classList.remove("hidden");
-        }
-
-        function closeSettingsModal() {
-            document.getElementById("settingsModal").classList.add("hidden");
-        }
-
-        function openHelpModal() {
-            alert("Fata AI Ultra Core ta na taimaka muku wajen amsa tambayoyi, ƙirƙirar hotuna da fassara harsuna.");
-        }
-
-        function copyToClipboard(button) {
-            const content = button.closest(".space-y-2").querySelector(".ai-content").innerText;
-            navigator.clipboard.writeText(content);
-            const originalIcon = button.innerHTML;
-            button.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
-            setTimeout(() => button.innerHTML = originalIcon, 2000);
-        }
-
-        function escapeHtml(text) {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-        }
-
-        function saveToHistory(sessionId, query) {
-            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
-            if (!history.some(item => item.sessionId === sessionId)) {
-                history.unshift({ sessionId, title: query.substring(0, 30) + "...", timestamp: new Date().toISOString() });
-                localStorage.setItem("fata_ai_history", JSON.stringify(history.slice(0, 20)));
-                renderSidebarHistory();
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                attachedFile = file;
+                document.getElementById("attachmentName").innerText = file.name;
+                document.getElementById("attachmentPreview").classList.remove("hidden");
+                document.getElementById("attachmentPreview").classList.add("flex");
             }
         }
 
-        function renderSidebarHistory() {
-            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
-            const listContainer = document.getElementById("recentChatsList");
-            listContainer.innerHTML = "";
-            history.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "sidebar-item text-xs truncate py-2 px-3 rounded-xl cursor-pointer";
-                div.innerHTML = `<i class="fa-regular fa-message text-[10px]"></i><span class="truncate">${escapeHtml(item.title)}</span>`;
-                div.onclick = () => {
-                    currentSessionId = item.sessionId;
-                    switchMode('chat');
-                };
-                listContainer.appendChild(div);
-            });
+        function removeAttachment() {
+            attachedFile = null;
+            document.getElementById("fileUploadInput").value = "";
+            document.getElementById("attachmentPreview").classList.add("hidden");
+            document.getElementById("attachmentPreview").classList.remove("flex");
         }
 
-        function loadChatsHistoryToList() {
-            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
-            const list = document.getElementById("searchResultsList");
-            list.innerHTML = "";
-            history.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 flex items-center justify-between transition";
-                div.innerHTML = `<span>${escapeHtml(item.title)}</span><i class="fa-solid fa-arrow-right text-gray-500"></i>`;
-                div.onclick = () => {
-                    currentSessionId = item.sessionId;
-                    closeSearchModal();
-                    switchMode('chat');
-                };
-                list.appendChild(div);
-            });
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        function filterChatsHistory() {
-            const query = document.getElementById("searchInputModal").value.toLowerCase();
-            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
-            const list = document.getElementById("searchResultsList");
+        function copyToClipboard(btn) {
+            const contentDiv = btn.closest(".space-y-2").querySelector(".ai-content");
+            navigator.clipboard.writeText(contentDiv.innerText);
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
+        }
+
+        function saveToHistory(sessionId, text) {
+            let history = JSON.parse(localStorage.getItem("fata_chat_history") || "[]");
+            if (!history.some(item => item.id === sessionId)) {
+                history.unshift({ id: sessionId, title: text.substring(0, 30) + "..." });
+                localStorage.setItem("fata_chat_history", JSON.stringify(history));
+                loadRecentChats();
+            }
+        }
+
+        function loadRecentChats() {
+            const list = document.getElementById("recentChatsList");
+            let history = JSON.parse(localStorage.getItem("fata_chat_history") || "[]");
             list.innerHTML = "";
-            history.filter(item => item.title.toLowerCase().includes(query)).forEach(item => {
+            history.forEach(chat => {
                 const div = document.createElement("div");
-                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 flex items-center justify-between transition";
-                div.innerHTML = `<span>${escapeHtml(item.title)}</span><i class="fa-solid fa-arrow-right text-gray-500"></i>`;
+                div.className = "sidebar-item text-xs truncate py-2 px-3";
+                div.innerHTML = `<i class="fa-regular fa-message text-gray-500"></i><span class="truncate">${escapeHtml(chat.title)}</span>`;
                 div.onclick = () => {
-                    currentSessionId = item.sessionId;
-                    closeSearchModal();
+                    currentSessionId = chat.id;
                     switchMode('chat');
                 };
                 list.appendChild(div);
@@ -718,19 +655,27 @@
         }
 
         function clearAllHistory() {
-            localStorage.removeItem("fata_ai_history");
-            renderSidebarHistory();
-            closeSettingsModal();
+            if (confirm("Kuna son goge dukkan tarihin tattaunawar ku?")) {
+                localStorage.removeItem("fata_chat_history");
+                loadRecentChats();
+                startNewSession();
+                closeSettingsModal();
+            }
         }
 
         function shareCurrentChat() {
-            navigator.clipboard.writeText(window.location.href);
-            alert("An kwafi hanyar tattaunawar zuwa cikin clipboard!");
+            alert("An shiryatar da hanyar raba tattaunawa (Share link copied)!");
         }
 
-        // Initialize application state
+        function openSearchModal() { document.getElementById("searchModal").classList.remove("hidden"); }
+        function closeSearchModal() { document.getElementById("searchModal").classList.add("hidden"); }
+        function openSettingsModal() { document.getElementById("settingsModal").classList.remove("hidden"); }
+        function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
+        function openHelpModal() { document.getElementById("helpModal").classList.remove("hidden"); }
+        function closeHelpModal() { document.getElementById("helpModal").classList.add("hidden"); }
+
         window.onload = () => {
-            renderSidebarHistory();
+            loadRecentChats();
             initializeAuth();
         };
     </script>
