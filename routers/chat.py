@@ -17,7 +17,6 @@ router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-# Fara ainihin Google GenAI Client
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 class ChatRequest(BaseModel):
@@ -69,31 +68,13 @@ async def stream_chat(
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    # Dauko tsohon tarihi daga MongoDB domin ba wa AI damar fahimtar jigon maganar
-    chat_collection = get_chat_collection()
-    previous_messages = []
-    
-    if chat_collection is not None:
-        existing_session = await chat_collection.find_one({"_id": session_id})
-        if existing_session and "messages" in existing_session:
-            # Dauko sakonni 10 na karshe domin adana memory
-            for msg in existing_session["messages"][-10:]:
-                role = "user" if msg.get("role") == "user" else "model"
-                previous_messages.append(
-                    types.Content(
-                        role=role,
-                        parts=[types.Part.from_text(text=msg.get("content", ""))]
-                    )
-                )
-
-    # Yin binciken Intanet ta Tavily idan tambayar tana bukatar sabon bayani na 2026
+    # 1. Yi bincike ta Tavily da farko domin tabbatar da an samu sabbin bayanan 2026
     web_search_context = await fetch_tavily_search(user_query)
       
     system_prompt = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
         "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
-        "Yanzu muna cikin shekara ta 2026. "
-        "Ka riƙa amfani da tsari mai kyau (headings, bolding, lists) wajen gabatar da amsoshinka."
+        "Yanzu muna cikin shekara ta 2026. Ka guji amfani da tsoffin bayanai idan akwai sababbi a cikin bayanan intanet da aka ba ka."
     )
 
     if web_search_context:
@@ -102,13 +83,12 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Tabbatar da amfani da sahihin model kamar gemini-2.5-flash ko gemini-2.5-pro
+            # Amfani da sahihin samfurin da zai bayar da sakamako mai kyau
             target_model = "gemini-2.5-flash"
             if req.model and "pro" in req.model.lower():
                 target_model = "gemini-2.5-pro"
 
-            # Haɗa tsohon tarihi da sabon sako a matsayin contents
-            contents = previous_messages + [
+            contents = [
                 types.Content(
                     role="user",
                     parts=[types.Part.from_text(text=user_query)]
@@ -133,7 +113,8 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Ajiye sakon a MongoDB
+            # Ajiye a MongoDB
+            chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}

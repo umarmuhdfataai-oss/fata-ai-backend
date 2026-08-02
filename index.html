@@ -561,115 +561,71 @@
         function toggleVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                alert("Browser ɗin ku bai goyon bayan Voice Input ba.");
+                alert("Browser ɗinka bata goyon bayan tsarin magana zuwa rubutu (Speech Recognition).");
                 return;
             }
 
-            const micBtn = document.getElementById("micBtn");
             const recognition = new SpeechRecognition();
-            recognition.lang = 'ha-NG';
+            recognition.lang = 'ha-NG'; // Hausa language support
+            const micBtn = document.getElementById("micBtn");
 
             if (!isRecording) {
                 recognition.start();
                 isRecording = true;
                 micBtn.classList.add("text-red-500", "animate-pulse");
-            } else {
-                recognition.stop();
-                isRecording = false;
-                micBtn.classList.remove("text-red-500", "animate-pulse");
+
+                recognition.onresult = (event) => {
+                    const speechToText = event.results[0][0].transcript;
+                    document.getElementById("userInput").value = speechToText;
+                };
+
+                recognition.onerror = () => {
+                    isRecording = false;
+                    micBtn.classList.remove("text-red-500", "animate-pulse");
+                };
+
+                recognition.onend = () => {
+                    isRecording = false;
+                    micBtn.classList.remove("text-red-500", "animate-pulse");
+                };
             }
+        }
 
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById("userInput").value = transcript;
-                micBtn.classList.remove("text-red-500", "animate-pulse");
-                isRecording = false;
-            };
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            attachedFile = file;
+            document.getElementById("attachmentName").innerText = file.name;
+            document.getElementById("attachmentPreview").classList.remove("hidden");
+            document.getElementById("attachmentPreview").classList.add("flex");
+        }
 
-            recognition.onerror = () => {
-                micBtn.classList.remove("text-red-500", "animate-pulse");
-                isRecording = false;
-            };
+        function removeAttachment() {
+            attachedFile = null;
+            document.getElementById("fileUploadInput").value = "";
+            document.getElementById("attachmentPreview").classList.remove("flex");
+            document.getElementById("attachmentPreview").classList.add("hidden");
         }
 
         function toggleModelDropdown() {
             document.getElementById("modelDropdown").classList.toggle("hidden");
         }
 
-        function selectModel(modelName, badgeText) {
-            if(badgeText === 'Gemini 3.6') {
-                activeModel = "gemini-3.6-flash";
-            } else {
-                activeModel = "gemini-3.6-pro";
-            }
-            document.getElementById("selectedModelText").innerText = badgeText;
-            document.getElementById("selectedModelBadge").innerText = modelName;
-            document.getElementById("modelDropdown").classList.add("hidden");
+        function selectModel(displayName, apiName) {
+            activeModel = apiName;
+            document.getElementById("selectedModelText").innerText = displayName.split(" ")[1] || displayName;
+            document.getElementById("selectedModelBadge").innerText = displayName;
+            toggleModelDropdown();
         }
 
-        function handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (file) {
-                attachedFile = file;
-                document.getElementById("attachmentName").innerText = file.name;
-                document.getElementById("attachmentPreview").classList.remove("hidden");
-                document.getElementById("attachmentPreview").classList.add("flex");
-            }
-        }
-
-        function removeAttachment() {
-            attachedFile = null;
-            document.getElementById("fileUploadInput").value = "";
-            document.getElementById("attachmentPreview").classList.add("hidden");
-            document.getElementById("attachmentPreview").classList.remove("flex");
-        }
-
-        function saveToHistory(sessionId, title) {
-            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
-            if (!history.find(h => h.id === sessionId)) {
-                history.unshift({ id: sessionId, title: title.substring(0, 30) + "..." });
-                localStorage.setItem("fata_history", JSON.stringify(history));
-                renderHistory();
-            }
-        }
-
-        function renderHistory() {
-            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
-            const listContainer = document.getElementById("recentChatsList");
-            listContainer.innerHTML = "";
-
-            history.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "sidebar-item text-xs justify-between group";
-                div.innerHTML = `
-                    <span onclick="loadChatSession('${item.id}')" class="truncate flex-1">${escapeHtml(item.title)}</span>
-                    <button onclick="deleteHistoryItem('${item.id}')" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1 transition"><i class="fa-solid fa-trash"></i></button>
-                `;
-                listContainer.appendChild(div);
-            });
-        }
-
-        function deleteHistoryItem(id) {
-            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
-            history = history.filter(h => h.id !== id);
-            localStorage.setItem("fata_history", JSON.stringify(history));
-            renderHistory();
-        }
-
-        function clearAllHistory() {
-            localStorage.removeItem("fata_history");
-            renderHistory();
-            closeSettingsModal();
-        }
-
-        function loadChatSession(id) {
-            currentSessionId = id;
-            switchMode('chat');
+        function toggleSidebar() {
+            const sidebar = document.getElementById("mainSidebar");
+            sidebar.classList.toggle("hidden");
         }
 
         function openSearchModal() {
             document.getElementById("searchModal").classList.remove("hidden");
-            filterChatsHistory();
+            loadChatsHistoryToList();
         }
 
         function closeSearchModal() {
@@ -685,27 +641,97 @@
         }
 
         function openHelpModal() {
-            alert("Fata AI Ultra Core v3.0 - An ƙera ta musamman domin bayar da ƙwarewa irin ta Google Gemini tare da tallafin harshen Hausa.");
+            alert("Fata AI Ultra Core ta na taimaka muku wajen amsa tambayoyi, ƙirƙirar hotuna da fassara harsuna.");
         }
 
-        function shareCurrentChat() {
-            alert("An kwafi hanyar tattaunawar (Link) domin raba wa wasu!");
+        function copyToClipboard(button) {
+            const content = button.closest(".space-y-2").querySelector(".ai-content").innerText;
+            navigator.clipboard.writeText(content);
+            const originalIcon = button.innerHTML;
+            button.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+            setTimeout(() => button.innerHTML = originalIcon, 2000);
         }
 
         function escapeHtml(text) {
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, m => map[m]);
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        function copyToClipboard(btn) {
-            const content = btn.closest('.space-y-2').querySelector('.ai-content').innerText;
-            navigator.clipboard.writeText(content);
-            alert("An kwafi amsar!");
+        function saveToHistory(sessionId, query) {
+            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
+            if (!history.some(item => item.sessionId === sessionId)) {
+                history.unshift({ sessionId, title: query.substring(0, 30) + "...", timestamp: new Date().toISOString() });
+                localStorage.setItem("fata_ai_history", JSON.stringify(history.slice(0, 20)));
+                renderSidebarHistory();
+            }
         }
 
+        function renderSidebarHistory() {
+            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
+            const listContainer = document.getElementById("recentChatsList");
+            listContainer.innerHTML = "";
+            history.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "sidebar-item text-xs truncate py-2 px-3 rounded-xl cursor-pointer";
+                div.innerHTML = `<i class="fa-regular fa-message text-[10px]"></i><span class="truncate">${escapeHtml(item.title)}</span>`;
+                div.onclick = () => {
+                    currentSessionId = item.sessionId;
+                    switchMode('chat');
+                };
+                listContainer.appendChild(div);
+            });
+        }
+
+        function loadChatsHistoryToList() {
+            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
+            const list = document.getElementById("searchResultsList");
+            list.innerHTML = "";
+            history.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 flex items-center justify-between transition";
+                div.innerHTML = `<span>${escapeHtml(item.title)}</span><i class="fa-solid fa-arrow-right text-gray-500"></i>`;
+                div.onclick = () => {
+                    currentSessionId = item.sessionId;
+                    closeSearchModal();
+                    switchMode('chat');
+                };
+                list.appendChild(div);
+            });
+        }
+
+        function filterChatsHistory() {
+            const query = document.getElementById("searchInputModal").value.toLowerCase();
+            let history = JSON.parse(localStorage.getItem("fata_ai_history") || "[]");
+            const list = document.getElementById("searchResultsList");
+            list.innerHTML = "";
+            history.filter(item => item.title.toLowerCase().includes(query)).forEach(item => {
+                const div = document.createElement("div");
+                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 flex items-center justify-between transition";
+                div.innerHTML = `<span>${escapeHtml(item.title)}</span><i class="fa-solid fa-arrow-right text-gray-500"></i>`;
+                div.onclick = () => {
+                    currentSessionId = item.sessionId;
+                    closeSearchModal();
+                    switchMode('chat');
+                };
+                list.appendChild(div);
+            });
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem("fata_ai_history");
+            renderSidebarHistory();
+            closeSettingsModal();
+        }
+
+        function shareCurrentChat() {
+            navigator.clipboard.writeText(window.location.href);
+            alert("An kwafi hanyar tattaunawar zuwa cikin clipboard!");
+        }
+
+        // Initialize application state
         window.onload = () => {
+            renderSidebarHistory();
             initializeAuth();
-            renderHistory();
         };
     </script>
 </body>
