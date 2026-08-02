@@ -75,18 +75,22 @@ async def stream_chat(
                 )
             )
 
-            # 3. Tura saƙo zuwa Gemini 3.6 Engine
-            response = await asyncio.to_thread(
-                client.models.generate_content_stream,
+            # 3. Tsarin Binciken Intanet na Kayan Aiki (Google Search)
+            search_tool = types.Tool(google_search=types.GoogleSearch())
+
+            # 4. Tura saƙo zuwa Gemini 3.6 Engine
+            # An yi amfani da client.aio wanda yake na asali a Async Python
+            response = await client.aio.models.generate_content_stream(
                 model=target_model,
                 contents=history_contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.7,
+                    tools=[search_tool]  # An ƙara Google Search domin sabunta bayanai zuwa shekarar 2026
                 )
             )
 
-            for chunk in response:
+            async for chunk in response:
                 if chunk.text:
                     full_assistant_response += chunk.text
                     payload = json.dumps({"content": chunk.text})
@@ -94,7 +98,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # 4. Adana sakamako a MongoDB
+            # 5. Adana sakamako a MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}

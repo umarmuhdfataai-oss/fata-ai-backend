@@ -3,535 +3,649 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fata AI - Ultra Core Engine</title>
+    <title>Fata AI Ultra Core - Powered by Google Gemini</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Highlight.js for Code Highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-    <!-- Marked.js for Markdown Rendering -->
+    <!-- Marked.js for Markdown Formatting -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e1e24; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        body {
+            background-color: #131314;
+            color: #e3e3e3;
+            font-family: 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .gemini-gradient-text {
+            background: linear-gradient(74deg, #4285F4 0%, #9B72CB 50%, #D96570 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sidebar { 
+            background-color: #1e1f20; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 9999px;
+            color: #c4c7c5;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background-color: #282a2c;
+            color: #e3e3e3;
+        }
+        .custom-input-bar {
+            background-color: #1e1f20;
+            border: 1px solid #3c4043;
+            border-radius: 28px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.25s ease;
+        }
+        .custom-input-bar:focus-within {
+            border-color: #4285F4;
+            background-color: #282a2c;
+            box-shadow: 0 4px 25px rgba(66, 133, 244, 0.15);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: #3c4043;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Markdown Styling Enhancements */
+        .ai-content pre {
+            background-color: #131314;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #3c4043;
+            margin: 8px 0;
+        }
+        .ai-content code {
+            font-family: monospace;
+            background-color: rgba(255,255,255,0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .ai-content p { margin-bottom: 8px; }
+        .ai-content ul { list-style-type: disc; padding-left: 20px; margin-bottom: 8px; }
+        .ai-content ol { list-style-type: decimal; padding-left: 20px; margin-bottom: 8px; }
     </style>
 </head>
-<body class="bg-[#0f0f11] text-gray-100 h-screen flex overflow-hidden">
-
-    <!-- BACKEND CONFIGURATION -->
-    <script>
-        const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
-        let currentUser = null;
-        let token = localStorage.getItem("fata_token") || null;
-        let currentChatId = null;
-    </script>
+<body class="h-screen flex overflow-hidden">
 
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="w-64 bg-[#18181b] border-r border-zinc-800 flex flex-col justify-between transition-all duration-300 md:relative absolute z-30 h-full -translate-x-full md:translate-x-0">
-        <div>
-            <!-- App Header -->
-            <div class="p-4 flex justify-between items-center border-b border-zinc-800">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg">F</div>
-                    <span class="font-bold text-lg tracking-wide text-white">Fata AI <span class="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/30">Ultra</span></span>
+    <aside id="mainSidebar" class="sidebar w-72 flex flex-col justify-between p-3 border-r border-[#282a2c] z-30 shrink-0 relative">
+        <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
+            <!-- Sidebar Header -->
+            <div class="flex items-center justify-between px-2 pt-2">
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleSidebar()" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Rufe Menu">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
+                            ✨
+                        </div>
+                        <span class="font-semibold text-base gemini-gradient-text tracking-wide">Fata AI</span>
+                    </div>
                 </div>
-                <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
             </div>
 
             <!-- New Chat Button -->
-            <div class="p-3">
-                <button onclick="startNewChat()" class="w-full py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-xl flex items-center gap-3 text-sm font-medium transition text-gray-200 shadow-sm">
-                    <i class="fa-solid fa-plus text-indigo-400"></i> Sabuwar Tattaunawa
-                </button>
-            </div>
+            <button onclick="startNewSession()" class="flex items-center space-x-3 w-full px-4 py-3 rounded-full bg-[#131314] hover:bg-[#282a2c] text-gray-200 text-sm font-medium border border-[#3c4043] transition shadow-sm group">
+                <i class="fa-regular fa-pen-to-square text-blue-400 group-hover:scale-110 transition-transform"></i>
+                <span>Sabuwar Tattaunawa</span>
+            </button>
 
-            <!-- History Search -->
-            <div class="px-3 pb-2">
-                <button onclick="openSearchModal()" class="w-full py-1.5 px-3 bg-zinc-900/60 border border-zinc-800 rounded-lg text-xs text-gray-400 flex items-center justify-between hover:border-zinc-700">
-                    <span class="flex items-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> Bincika tarihin...</span>
-                    <kbd class="px-1.5 py-0.5 text-[10px] bg-zinc-800 border border-zinc-700 rounded text-gray-400">Ctrl K</kbd>
-                </button>
-            </div>
+            <!-- Navigation Links -->
+            <nav class="space-y-1">
+                <div onclick="switchMode('chat')" id="navChat" class="sidebar-item active">
+                    <i class="fa-regular fa-comment-dots text-base w-5 text-center text-blue-400"></i>
+                    <span>Chat (Gemini)</span>
+                </div>
+                <div onclick="openSearchModal()" id="navSearch" class="sidebar-item">
+                    <i class="fa-solid fa-magnifying-glass text-base w-5 text-center"></i>
+                    <span>Binciken Tattaunawa</span>
+                </div>
+                <div onclick="switchMode('image')" id="navImages" class="sidebar-item">
+                    <i class="fa-regular fa-image text-base w-5 text-center"></i>
+                    <span>Hoto (Images)</span>
+                </div>
+            </nav>
 
-            <!-- Chat History List -->
-            <div class="px-3 py-2">
-                <p class="text-[11px] font-semibold text-gray-500 tracking-wider uppercase px-2 mb-2">Tarihin Tattaunawa</p>
-                <div id="historyList" class="space-y-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar pr-1">
-                    <!-- History items injected here -->
+            <hr class="border-[#282a2c]">
+
+            <!-- RECENT CHATS HISTORY -->
+            <div class="flex-1 overflow-y-auto space-y-1 pr-1">
+                <span class="text-xs font-medium text-gray-400 px-4 block mb-2">Tattaunawar Baya</span>
+                <div id="recentChatsList" class="space-y-1">
+                    <!-- History list items injected via JS -->
                 </div>
             </div>
         </div>
 
-        <!-- User Profile Section -->
-        <div id="userProfileArea" class="p-3 border-t border-zinc-800 bg-[#141417]">
-            <!-- Injected dynamically via JavaScript -->
+        <!-- Bottom User Profile Bar -->
+        <div class="border-t border-[#282a2c] pt-3 flex items-center justify-between px-2">
+            <div class="flex items-center space-x-3 truncate">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
+                    F
+                </div>
+                <div class="truncate">
+                    <p class="text-xs font-semibold text-gray-200 truncate">Fakruddeen</p>
+                    <p class="text-[10px] text-green-400 font-medium flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                        <span id="backendStatus">Connecting...</span>
+                    </p>
+                </div>
+            </div>
+            <button onclick="alert('Fata AI Ultra Core v3.0 Powered by Google Gemini Architecture.')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
+                <i class="fa-solid fa-gear text-sm"></i>
+            </button>
         </div>
     </aside>
 
-    <!-- MAIN CHAT AREA -->
-    <main class="flex-1 flex flex-col h-full bg-[#0f0f11] relative">
-        <!-- Top Navbar -->
-        <header class="h-14 border-b border-zinc-800/80 flex items-center justify-between px-4 bg-[#0f0f11]/80 backdrop-blur-md z-10">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white p-2">
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 flex flex-col justify-between h-full relative bg-[#131314] overflow-hidden">
+
+        <!-- TOP BAR -->
+        <header class="h-16 px-6 flex items-center justify-between border-b border-[#282a2c]/50 bg-[#131314]/80 backdrop-blur-md z-10 shrink-0">
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-[#282a2c] transition">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
-                <span id="currentChatTitle" class="font-medium text-sm text-gray-300 truncate max-w-[200px] md:max-w-md">Tattaunawa Sabuwa</span>
+                <div class="flex items-center space-x-2">
+                    <span id="currentWorkspaceTitle" class="text-base font-semibold text-gray-200">Fata AI Ultra Core</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium" id="selectedModelBadge">Gemini 3.6 Flash</span>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="flex h-2 w-2 relative">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span class="text-xs text-emerald-400 font-medium">Gemini Online</span>
-            </div>
+
+            <!-- Upgrade / Status Pill Button -->
+            <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
+                <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
+                <span>Gemini Engine Active</span>
+            </button>
         </header>
 
-        <!-- Messages Container -->
-        <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
-            <!-- Welcome Hero Screen -->
-            <div id="welcomeScreen" class="max-w-2xl mx-auto my-12 text-center space-y-4">
-                <div class="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-500/10">
-                    F
+        <!-- CONTENT DISPLAY AREA -->
+        <div id="mainContentArea" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-4xl w-full mx-auto flex flex-col justify-between scroll-smooth">
+            
+            <!-- Default Welcome Screen -->
+            <div id="welcomeScreen" class="my-auto text-center space-y-4 px-4">
+                <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 mx-auto flex items-center justify-center text-3xl shadow-xl shadow-blue-500/10 mb-2">
+                    ✨
                 </div>
-                <h1 class="text-2xl md:text-3xl font-bold text-white">Sannu da zuwa Fata AI</h1>
-                <p class="text-gray-400 text-sm max-w-md mx-auto">Injin ku na AI mai sauri da basira. Tambayi kowace irin tambaya, ko neman shawara.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4 text-left">
-                    <button onclick="usePrompt('Yi min bayani game da FastAPI da MongoDB')" class="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-indigo-500/50 transition text-xs text-gray-300">
-                        <i class="fa-solid fa-code text-indigo-400 mb-2 block"></i>
-                        <span class="font-semibold block text-white">Bayani akan Code</span>
-                        Yi min bayani game da FastAPI...
-                    </button>
-                    <button onclick="usePrompt('Rubuta min shawarwari 5 na inganta kasuwanci')" class="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-indigo-500/50 transition text-xs text-gray-300">
-                        <i class="fa-solid fa-lightbulb text-amber-400 mb-2 block"></i>
-                        <span class="font-semibold block text-white">Shawarwari</span>
-                        Rubuta min shawarwari 5 na...
-                    </button>
+                <h1 class="text-3xl md:text-5xl font-semibold text-gray-200 tracking-tight">
+                    Barka da zuwa, <span class="gemini-gradient-text font-bold">Fakruddeen</span>
+                </h1>
+                <p class="text-gray-400 text-sm md:text-base max-w-md mx-auto leading-relaxed">
+                    Ina za mu dosa a yau? Fata AI tana aiki ne da tsarin Google Gemini Engine don sauƙaƙe maka duk wani aiki.
+                </p>
+                <div class="flex flex-wrap justify-center gap-2 pt-4">
+                    <button onclick="quickPrompt('Rubuta min wani gajeren shiri na fasahar zamani.')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">💻 Shirin Fasaha</button>
+                    <button onclick="quickPrompt('Mene ne fa\'idar Google Gemini a kan sauran AI engines?')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">🚀 Gemini Power</button>
+                    <button onclick="quickPrompt('Ka rubuta min waka ta yabon Hausa mai daɗi.')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">📜 Waƙar Hausa</button>
+                </div>
+            </div>
+
+            <!-- Dynamic Chat Container -->
+            <div id="chatContainer" class="space-y-6 hidden w-full pb-6"></div>
+            
+            <!-- Dynamic Image Container -->
+            <div id="imageContainer" class="hidden w-full text-center space-y-6 my-auto">
+                <div class="max-w-xl mx-auto space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-200">Tsarin Ƙirƙirar Hoto (Image Generator)</h2>
+                    <p class="text-xs text-gray-400">Rubuta siffar hoto a cikin akwatin rubutu na ƙasa sannan ka danna aika don ganin ikon Fata AI.</p>
+                </div>
+                <div id="imageResult" class="min-h-[350px] bg-[#1e1f20] border border-[#3c4043] rounded-2xl flex items-center justify-center overflow-hidden p-4 shadow-2xl relative">
+                    <span id="imgPlaceholder" class="text-gray-500 text-sm flex items-center gap-2">
+                        <i class="fa-regular fa-image text-lg"></i> Hotonka zai bayyana a nan...
+                    </span>
+                    <img id="generatedImg" class="hidden max-h-[500px] w-full object-contain rounded-xl shadow-lg transition-all duration-300" alt="Generated Output">
                 </div>
             </div>
         </div>
 
-        <!-- Prompt Input Bar -->
-        <div class="p-3 md:p-4 border-t border-zinc-800/80 bg-[#0f0f11]">
-            <div class="max-w-3xl mx-auto relative bg-[#18181b] border border-zinc-700/60 rounded-2xl focus-within:border-indigo-500 transition shadow-lg">
-                <textarea id="promptInput" rows="1" placeholder="Rubuta tambayarku anan..." class="w-full bg-transparent px-4 py-3 pr-12 text-sm text-gray-100 focus:outline-none resize-none max-h-32 custom-scrollbar"></textarea>
-                <button id="sendBtn" onclick="sendMessage()" class="absolute right-2 bottom-2 w-8 h-8 bg-indigo-600 hover:bg-indigo-500 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50">
-                    <i class="fa-solid fa-arrow-up text-sm"></i>
-                </button>
+        <!-- FLOATING INPUT BAR -->
+        <div class="p-4 w-full max-w-4xl mx-auto shrink-0 bg-[#131314]">
+            <!-- Attached File Preview Container -->
+            <div id="attachmentPreview" class="hidden items-center justify-between bg-[#1e1f20] border border-[#3c4043] rounded-xl px-4 py-2 mb-2 text-xs text-gray-300">
+                <div class="flex items-center space-x-2 truncate">
+                    <i class="fa-solid fa-paperclip text-blue-400"></i>
+                    <span id="attachmentName" class="truncate font-medium">filename.png</span>
+                </div>
+                <button onclick="removeAttachment()" class="text-red-400 hover:text-red-300 ml-2 p-1"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-[10px] text-center text-gray-500 mt-2">Fata AI Ultra Core Engine wani tsari ne mai amfani da basirar Gemini AI.</p>
+
+            <form id="inputForm" onsubmit="handleFormSubmit(event)" class="custom-input-bar p-2.5 flex items-center space-x-2">
+                
+                <!-- Plus Button (Attach File) -->
+                <label for="fileUploadInput" class="p-2.5 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white cursor-pointer transition shrink-0" title="Saka Fayil ko Hoto">
+                    <i class="fa-solid fa-plus text-base"></i>
+                    <input type="file" id="fileUploadInput" class="hidden" onchange="handleFileUpload(event)">
+                </label>
+
+                <!-- Text Input -->
+                <input type="text" id="userInput" placeholder="Rubuta saƙonki ko tambaya a nan..." autocomplete="off"
+                       class="flex-1 bg-transparent text-gray-200 text-sm focus:outline-none px-2 placeholder-gray-500">
+
+                <!-- Model Selector Dropdown -->
+                <div class="relative shrink-0">
+                    <button type="button" onclick="toggleModelDropdown()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#131314] border border-[#3c4043] text-xs font-medium text-gray-300 hover:bg-[#282a2c] transition">
+                        <span id="selectedModelText">Gemini 3.6</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+                    </button>
+                    <div id="modelDropdown" class="hidden absolute bottom-12 right-0 w-48 bg-[#1e1f20] border border-[#3c4043] rounded-2xl shadow-2xl z-40 py-1.5 text-xs overflow-hidden">
+                        <div onclick="selectModel('Gemini 3.6 Flash', 'Gemini 3.6')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                            <span>Gemini 3.6 Flash</span>
+                            <i class="fa-solid fa-bolt text-blue-400"></i>
+                        </div>
+                        <div onclick="selectModel('Gemini 3.6 Pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                            <span>Gemini 3.6 Pro</span>
+                            <i class="fa-solid fa-brain text-purple-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mic Icon Button (Voice Recognition) -->
+                <button type="button" id="micBtn" onclick="toggleVoiceRecognition()" class="p-2.5 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition shrink-0" title="Yi Magana">
+                    <i class="fa-solid fa-microphone text-base"></i>
+                </button>
+
+                <!-- Submit / Send Button -->
+                <button type="submit" id="sendBtn" class="p-2.5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white transition shrink-0 shadow-md">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </form>
+            <p class="text-[11px] text-center text-gray-500 mt-2">
+                Fata AI na iya tafka kuskure. Tabbatar da ingancin mahimman bayanai.
+            </p>
         </div>
+
     </main>
 
-    <!-- AUTH MODAL (LOGIN / REGISTER) -->
-    <div id="authModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-[#18181b] border border-zinc-800 p-6 rounded-2xl w-full max-w-md relative shadow-2xl">
-            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            
-            <!-- Auth Tabs -->
-            <div class="flex gap-4 border-b border-zinc-800 mb-6">
-                <button id="tabLogin" onclick="switchAuthTab('login')" class="pb-2 text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500">Shiga (Login)</button>
-                <button id="tabRegister" onclick="switchAuthTab('register')" class="pb-2 text-sm font-semibold text-gray-400">Rijista (Register)</button>
+    <!-- SEARCH CHATS MODAL -->
+    <div id="searchModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-lg rounded-3xl p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-blue-400"></i> Bincika Tattaunawa
+                </h3>
+                <button onclick="closeSearchModal()" class="text-gray-400 hover:text-white p-1.5 rounded-full hover:bg-[#282a2c] transition"><i class="fa-solid fa-xmark"></i></button>
             </div>
-
-            <!-- Login Form -->
-            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">Email</label>
-                    <input type="email" id="loginEmail" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">Password</label>
-                    <input type="password" id="loginPassword" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-                <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-medium text-white transition shadow-lg shadow-indigo-600/20">Shiga Tattaunawa</button>
-            </form>
-
-            <!-- Register Form -->
-            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">Suna (Full Name)</label>
-                    <input type="text" id="regName" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">Email</label>
-                    <input type="email" id="regEmail" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">Password</label>
-                    <input type="password" id="regPassword" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-                <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-medium text-white transition shadow-lg shadow-purple-600/20">Ajiye Rijista</button>
-            </form>
+            <input type="text" id="searchInputModal" onkeyup="filterChatsHistory()" placeholder="Rubuta kalmar bincike..." class="w-full bg-[#131314] border border-[#3c4043] rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-blue-500 transition">
+            <div id="searchResultsList" class="max-h-60 overflow-y-auto space-y-2 pr-1"></div>
         </div>
     </div>
 
-    <!-- SEARCH MODAL -->
-    <div id="searchModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center pt-20 hidden">
-        <div class="bg-[#18181b] border border-zinc-800 p-4 rounded-2xl w-full max-w-lg relative shadow-2xl">
-            <div class="flex items-center gap-3 border-b border-zinc-800 pb-3">
-                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-                <input type="text" id="searchInput" oninput="filterChatsHistory()" placeholder="Bincika cikin tarihin tattaunawa..." class="w-full bg-transparent text-sm text-white focus:outline-none">
-                <button onclick="closeSearchModal()" class="text-xs bg-zinc-800 text-gray-400 px-2 py-1 rounded">ESC</button>
-            </div>
-            <div id="searchResults" class="mt-3 max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
-                <!-- Dynamic Search Results -->
-            </div>
-        </div>
-    </div>
-
-    <!-- JAVASCRIPT LOGIC -->
+    <!-- JAVASCRIPT ENGINE LOGIC -->
     <script>
-        let chatHistory = [];
+        const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
+        let currentSessionId = generateSessionId();
+        let userAuthToken = "";
+        let currentMode = "chat";
+        let attachedFile = null;
+        let activeModel = "gemini-3.6-flash";
+        let isRecording = false;
 
-        // Auto Resize Textarea
-        const promptInput = document.getElementById("promptInput");
-        promptInput.addEventListener("input", function() {
-            this.style.height = "auto";
-            this.style.height = (this.scrollHeight) + "px";
-        });
+        function generateSessionId() {
+            return "session_" + Math.random().toString(36).substring(2, 11);
+        }
 
-        // Toggle Sidebar
         function toggleSidebar() {
-            document.getElementById("sidebar").classList.toggle("-translate-x-full");
+            const sidebar = document.getElementById("mainSidebar");
+            sidebar.classList.toggle("-translate-x-full");
+            sidebar.classList.toggle("absolute");
         }
 
-        // Open/Close Auth Modal
-        function openAuthModal() { document.getElementById("authModal").classList.remove("hidden"); }
-        function closeAuthModal() { document.getElementById("authModal").classList.add("hidden"); }
+        function switchMode(mode) {
+            currentMode = mode;
+            const welcomeScreen = document.getElementById("welcomeScreen");
+            const chatContainer = document.getElementById("chatContainer");
+            const imageContainer = document.getElementById("imageContainer");
+            const title = document.getElementById("currentWorkspaceTitle");
 
-        function switchAuthTab(tab) {
-            const loginForm = document.getElementById("loginForm");
-            const regForm = document.getElementById("registerForm");
-            const tabLogin = document.getElementById("tabLogin");
-            const tabRegister = document.getElementById("tabRegister");
+            document.querySelectorAll(".sidebar-item").forEach(item => item.classList.remove("active"));
 
-            if (tab === 'login') {
-                loginForm.classList.remove("hidden");
-                regForm.classList.add("hidden");
-                tabLogin.className = "pb-2 text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500";
-                tabRegister.className = "pb-2 text-sm font-semibold text-gray-400";
-            } else {
-                loginForm.classList.add("hidden");
-                regForm.classList.remove("hidden");
-                tabRegister.className = "pb-2 text-sm font-semibold text-purple-400 border-b-2 border-purple-500";
-                tabLogin.className = "pb-2 text-sm font-semibold text-gray-400";
-            }
-        }
-
-        // Auth Logic
-        async function handleLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById("loginEmail").value;
-            const password = document.getElementById("loginPassword").value;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    token = data.access_token;
-                    localStorage.setItem("fata_token", token);
-                    closeAuthModal();
-                    initializeAuth();
+            if (mode === 'chat') {
+                document.getElementById("navChat").classList.add("active");
+                title.innerText = "Interactive Gemini Chat";
+                imageContainer.classList.add("hidden");
+                if (chatContainer.children.length > 0) {
+                    welcomeScreen.classList.add("hidden");
+                    chatContainer.classList.remove("hidden");
                 } else {
-                    alert(data.detail || "An samu matsala wajen shiga.");
+                    welcomeScreen.classList.remove("hidden");
                 }
-            } catch (err) {
-                console.error(err);
-                alert("Akwai matsala wajen haɗawa da uwar garke (Server).");
+            } else if (mode === 'image') {
+                document.getElementById("navImages").classList.add("active");
+                title.innerText = "Fata AI Image Generator";
+                welcomeScreen.classList.add("hidden");
+                chatContainer.classList.add("hidden");
+                imageContainer.classList.remove("hidden");
             }
         }
 
-        async function handleRegister(e) {
-            e.preventDefault();
-            const name = document.getElementById("regName").value;
-            const email = document.getElementById("regEmail").value;
-            const password = document.getElementById("regPassword").value;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ full_name: name, email, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("Rijista ta kammala! Shiga yanzu.");
-                    switchAuthTab("login");
-                } else {
-                    alert(data.detail || "Rijista ba ta yi nasara ba.");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Akwai matsala wajen haɗawa da uwar garke (Server).");
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem("fata_token");
-            token = null;
-            currentUser = null;
-            currentChatId = null;
-            initializeAuth();
-        }
-
-        // Initialize User Info
         async function initializeAuth() {
-            const profileArea = document.getElementById("userProfileArea");
-            if (token) {
-                try {
-                    const res = await fetch(`${API_BASE_URL}/api/users/me`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                        currentUser = await res.json();
-                        profileArea.innerHTML = `
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-                                        ${currentUser.full_name ? currentUser.full_name[0].toUpperCase() : 'U'}
-                                    </div>
-                                    <div class="truncate max-w-[120px]">
-                                        <p class="text-xs font-medium text-gray-200 truncate">${currentUser.full_name || 'Mai amfani'}</p>
-                                        <p class="text-[10px] text-gray-500 truncate">${currentUser.email}</p>
-                                    </div>
-                                </div>
-                                <button onclick="logout()" class="text-gray-400 hover:text-red-400 text-xs p-1" title="Saukawa">
-                                    <i class="fa-solid fa-right-from-bracket"></i>
-                                </button>
-                            </div>
-                        `;
-                        fetchChatHistory();
-                        return;
-                    }
-                } catch (e) { console.error(e); }
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/v2/auth/guest`, { method: "POST" });
+                if (res.ok) {
+                    const data = await res.json();
+                    userAuthToken = data.access_token;
+                    document.getElementById("backendStatus").innerText = "Online";
+                } else {
+                    document.getElementById("backendStatus").innerText = "Offline";
+                }
+            } catch (err) {
+                document.getElementById("backendStatus").innerText = "Error";
             }
-
-            // Default logged-out view
-            profileArea.innerHTML = `
-                <button onclick="openAuthModal()" class="w-full py-2 px-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition">
-                    <i class="fa-solid fa-user"></i> Shiga ko Yi Rijista
-                </button>
-            `;
         }
 
-        // Chat Operations
-        function usePrompt(text) {
-            document.getElementById("promptInput").value = text;
-            sendMessage();
+        function startNewSession() {
+            currentSessionId = generateSessionId();
+            document.getElementById("chatContainer").innerHTML = "";
+            document.getElementById("chatContainer").classList.add("hidden");
+            document.getElementById("welcomeScreen").classList.remove("hidden");
+            removeAttachment();
         }
 
-        function startNewChat() {
-            currentChatId = null;
-            document.getElementById("messagesContainer").innerHTML = `
-                <div id="welcomeScreen" class="max-w-2xl mx-auto my-12 text-center space-y-4">
-                    <div class="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-500/10">F</div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-white">Sannu da zuwa Fata AI</h1>
-                    <p class="text-gray-400 text-sm max-w-md mx-auto">Injin ku na AI mai sauri da basira. Tambayi kowace irin tambaya, ko neman shawara.</p>
+        function quickPrompt(text) {
+            document.getElementById("userInput").value = text;
+            handleFormSubmit(new Event('submit'));
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById("userInput");
+            const query = input.value.trim();
+            if (!query && !attachedFile) return;
+
+            if (currentMode === 'image') {
+                handleGenerateImage(query);
+            } else {
+                handleSendChat(query);
+            }
+            input.value = "";
+            removeAttachment();
+        }
+
+        async function handleSendChat(message) {
+            if (!userAuthToken) await initializeAuth();
+
+            const welcomeScreen = document.getElementById("welcomeScreen");
+            const chatContainer = document.getElementById("chatContainer");
+
+            welcomeScreen.classList.add("hidden");
+            chatContainer.classList.remove("hidden");
+
+            saveToHistory(currentSessionId, message);
+
+            const userBubble = document.createElement("div");
+            userBubble.className = "flex justify-end my-4 animate-fadeIn";
+            userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed shadow-sm">${escapeHtml(message)}</div>`;
+            chatContainer.appendChild(userBubble);
+
+            const aiBubble = document.createElement("div");
+            aiBubble.className = "flex items-start space-x-3 my-4 animate-fadeIn";
+            aiBubble.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">✨</div>
+                <div class="space-y-2 max-w-3xl w-full">
+                    <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed ai-content shadow-sm">
+                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini yana saurin rubuta amsa...</span>
+                    </div>
+                    <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
+                        <button onclick="copyToClipboard(this)" class="hover:text-white transition" title="Kwafi"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="handleSendChat('${escapeHtml(message).replace(/'/g, "\\'")}')" class="hover:text-white transition" title="Sake Amsawa"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button onclick="this.classList.toggle('text-green-400')" class="hover:text-white transition" title="Yayi"><i class="fa-regular fa-thumbs-up"></i></button>
+                        <button onclick="this.classList.toggle('text-red-400')" class="hover:text-white transition" title="Bai yi ba"><i class="fa-regular fa-thumbs-down"></i></button>
+                    </div>
                 </div>
             `;
-            document.getElementById("currentChatTitle").innerText = "Tattaunawa Sabuwa";
+            chatContainer.appendChild(aiBubble);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const aiContent = aiBubble.querySelector(".ai-content");
+
+            try {
+                let response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userAuthToken}` },
+                    body: JSON.stringify({ message: message, session_id: currentSessionId, model: activeModel })
+                });
+
+                if (!response.ok) {
+                    aiContent.innerHTML = `<span class="text-red-400">⚠️ Kuskure daga Server (${response.status})</span>`;
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                aiContent.innerHTML = "";
+                let accumulatedText = "";
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith("data: ")) {
+                            const raw = trimmed.replace(/^data:\s*/, "");
+                            if (raw === "[DONE]") continue;
+
+                            try {
+                                const parsed = JSON.parse(raw);
+                                if (parsed.content) {
+                                    accumulatedText += parsed.content;
+                                    aiContent.innerHTML = marked.parse(accumulatedText);
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                            } catch (e) {
+                                accumulatedText += raw.replace(/\\n/g, "\n");
+                                aiContent.innerHTML = marked.parse(accumulatedText);
+                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                aiContent.innerHTML = `<span class="text-red-400">⚠️ Kuskure wajen haɗawa: ${err.message}</span>`;
+            }
         }
 
-        async function fetchChatHistory() {
-            if (!token) return;
+        async function handleGenerateImage(prompt) {
+            const placeholder = document.getElementById("imgPlaceholder");
+            const imgElement = document.getElementById("generatedImg");
+
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400 text-xl mr-2"></i> Yana ƙirƙirar hoto ta amfani da AI...`;
+            placeholder.classList.remove("hidden");
+            imgElement.classList.add("hidden");
+
             try {
-                const res = await fetch(`${API_BASE_URL}/api/chats`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    chatHistory = await res.json();
-                    renderHistory();
-                }
-            } catch (err) { console.error(err); }
+                const encodedPrompt = encodeURIComponent(prompt);
+                imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true`;
+                imgElement.onload = () => {
+                    placeholder.classList.add("hidden");
+                    imgElement.classList.remove("hidden");
+                };
+            } catch (err) {
+                placeholder.innerHTML = `<span class="text-red-400">⚠️ An samu kuskure wajen ƙirƙirar hoto.</span>`;
+            }
+        }
+
+        function toggleVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Browser ɗin ku bai goyon bayan Voice Input ba.");
+                return;
+            }
+
+            const micBtn = document.getElementById("micBtn");
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ha-NG';
+
+            if (!isRecording) {
+                recognition.start();
+                isRecording = true;
+                micBtn.classList.add("text-red-500", "animate-pulse");
+            } else {
+                recognition.stop();
+                isRecording = false;
+                micBtn.classList.remove("text-red-500", "animate-pulse");
+            }
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById("userInput").value = transcript;
+                micBtn.classList.remove("text-red-500", "animate-pulse");
+                isRecording = false;
+            };
+
+            recognition.onerror = () => {
+                micBtn.classList.remove("text-red-500", "animate-pulse");
+                isRecording = false;
+            };
+        }
+
+        function toggleModelDropdown() {
+            document.getElementById("modelDropdown").classList.toggle("hidden");
+        }
+
+        function selectModel(modelName, badgeText) {
+            if(badgeText === 'Gemini 3.6') {
+                activeModel = "gemini-3.6-flash";
+            } else {
+                activeModel = "gemini-3.6-pro";
+            }
+            document.getElementById("selectedModelText").innerText = badgeText;
+            document.getElementById("selectedModelBadge").innerText = modelName;
+            document.getElementById("modelDropdown").classList.add("hidden");
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                attachedFile = file;
+                document.getElementById("attachmentName").innerText = file.name;
+                document.getElementById("attachmentPreview").classList.remove("hidden");
+                document.getElementById("attachmentPreview").classList.add("flex");
+            }
+        }
+
+        function removeAttachment() {
+            attachedFile = null;
+            document.getElementById("fileUploadInput").value = "";
+            document.getElementById("attachmentPreview").classList.add("hidden");
+            document.getElementById("attachmentPreview").classList.remove("flex");
+        }
+
+        function saveToHistory(sessionId, title) {
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            if (!history.find(h => h.id === sessionId)) {
+                history.unshift({ id: sessionId, title: title.substring(0, 30) + "..." });
+                localStorage.setItem("fata_history", JSON.stringify(history));
+                renderHistory();
+            }
         }
 
         function renderHistory() {
-            const list = document.getElementById("historyList");
-            list.innerHTML = "";
-            chatHistory.forEach(chat => {
-                const item = document.createElement("div");
-                item.className = `group flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition ${currentChatId === chat.id ? 'bg-zinc-800 text-white' : 'text-gray-400 hover:bg-zinc-900 hover:text-gray-200'}`;
-                item.onclick = () => loadChatSession(chat.id);
-                item.innerHTML = `
-                    <div class="flex items-center gap-2 truncate flex-1">
-                        <i class="fa-regular fa-message text-[10px]"></i>
-                        <span class="truncate">${escapeHtml(chat.title || 'Tattaunawa')}</span>
-                    </div>
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            const listContainer = document.getElementById("recentChatsList");
+            listContainer.innerHTML = "";
+
+            history.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "sidebar-item text-xs justify-between group";
+                div.innerHTML = `
+                    <span onclick="loadChatSession('${item.id}')" class="truncate flex-1">${escapeHtml(item.title)}</span>
+                    <button onclick="deleteHistoryItem('${item.id}')" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1 transition"><i class="fa-solid fa-trash"></i></button>
                 `;
-                list.appendChild(item);
+                listContainer.appendChild(div);
             });
         }
 
-        async function loadChatSession(chatId) {
-            currentChatId = chatId;
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            history = history.filter(h => h.id !== id);
+            localStorage.setItem("fata_history", JSON.stringify(history));
             renderHistory();
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById("currentChatTitle").innerText = data.title || "Tattaunawa";
-                    const container = document.getElementById("messagesContainer");
-                    container.innerHTML = "";
-                    data.messages.forEach(msg => {
-                        appendMessage(msg.role, msg.content);
-                    });
-                }
-            } catch (err) { console.error(err); }
         }
 
-        async function sendMessage() {
-            const input = document.getElementById("promptInput");
-            const text = input.value.trim();
-            if (!text) return;
-
-            // Clear input & remove welcome screen
-            input.value = "";
-            input.style.height = "auto";
-            const welcomeScreen = document.getElementById("welcomeScreen");
-            if (welcomeScreen) welcomeScreen.remove();
-
-            // Render User Message
-            appendMessage("user", text);
-
-            // Render Temporary AI Loading Shell
-            const aiMessageId = appendMessage("assistant", `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Ina tunani...`);
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/chat/generate`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(token ? { "Authorization": `Bearer ${token}` } : {})
-                    },
-                    body: JSON.stringify({
-                        prompt: text,
-                        chat_id: currentChatId
-                    })
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    updateMessage(aiMessageId, data.response);
-                    if (data.chat_id) currentChatId = data.chat_id;
-                    fetchChatHistory();
-                } else {
-                    updateMessage(aiMessageId, `⚠️ Kuskure: ${data.detail || 'An samu matsala.'}`);
-                }
-            } catch (err) {
-                console.error(err);
-                updateMessage(aiMessageId, "⚠️ An samu kuskure wajen haɗawa da Fata AI Engine.");
-            }
+        function loadChatSession(id) {
+            currentSessionId = id;
+            switchMode('chat');
         }
 
-        function appendMessage(role, content) {
-            const container = document.getElementById("messagesContainer");
-            const msgId = "msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4);
-            const isUser = role === "user";
-
-            const div = document.createElement("div");
-            div.id = msgId;
-            div.className = `flex gap-3 max-w-3xl mx-auto ${isUser ? 'justify-end' : 'justify-start'}`;
-
-            div.innerHTML = `
-                <div class="flex gap-3 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}">
-                    <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold ${isUser ? 'bg-indigo-600 text-white' : 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white'}">
-                        ${isUser ? 'K' : 'F'}
-                    </div>
-                    <div class="space-y-2">
-                        <div class="p-3.5 rounded-2xl text-sm ${isUser ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-[#18181b] border border-zinc-800 text-gray-200 rounded-tl-none'} shadow-sm ai-content">
-                            ${isUser ? escapeHtml(content) : marked.parse(content)}
-                        </div>
-                        ${!isUser ? `
-                            <div class="flex items-center gap-2 text-[11px] text-gray-500 px-1">
-                                <button onclick="copyToClipboard(this)" class="hover:text-gray-300 transition flex items-center gap-1">
-                                    <i class="fa-regular fa-copy"></i> Kwafa
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-            hljs.highlightAll();
-            return msgId;
+        function openSearchModal() {
+            document.getElementById("searchModal").classList.remove("hidden");
+            filterChatsHistory();
         }
 
-        function updateMessage(msgId, newContent) {
-            const msgDiv = document.getElementById(msgId);
-            if (msgDiv) {
-                const contentDiv = msgDiv.querySelector('.ai-content');
-                contentDiv.innerHTML = marked.parse(newContent);
-                hljs.highlightAll();
-            }
+        function closeSearchModal() {
+            document.getElementById("searchModal").classList.add("hidden");
         }
-
-        // Search Modal Functions
-        function openSearchModal() { document.getElementById("searchModal").classList.remove("hidden"); }
-        function closeSearchModal() { document.getElementById("searchModal").classList.add("hidden"); }
 
         function filterChatsHistory() {
-            const query = document.getElementById("searchInput").value.toLowerCase();
-            const resultsList = document.getElementById("searchResults");
+            const query = document.getElementById("searchInputModal").value.toLowerCase();
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            const resultsList = document.getElementById("searchResultsList");
             resultsList.innerHTML = "";
 
-            const filtered = chatHistory.filter(c => (c.title || '').toLowerCase().includes(query));
+            const filtered = history.filter(h => h.title.toLowerCase().includes(query));
+            if (filtered.length === 0) {
+                resultsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">Babu tattaunawa mai wannan sunan.</p>`;
+                return;
+            }
+
             filtered.forEach(item => {
                 const div = document.createElement("div");
-                div.className = "p-3 rounded-xl bg-[#131314] hover:bg-[#282a2c] cursor-pointer transition text-xs text-gray-200 flex justify-between items-center";
+                div.className = "p-3 rounded-xl bg-[#131314] hover:bg-[#282a2c] cursor-pointer text-xs text-gray-300 flex items-center justify-between transition";
                 div.onclick = () => {
                     loadChatSession(item.id);
                     closeSearchModal();
                 };
                 div.innerHTML = `
-                    <span class="truncate flex-1">${escapeHtml(item.title)}</span>
-                    <i class="fa-solid fa-chevron-right text-gray-500 text-[10px]"></i>
+                    <span class="truncate">${escapeHtml(item.title)}</span>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-gray-500"></i>
                 `;
                 resultsList.appendChild(div);
             });
-
-            if (filtered.length === 0) {
-                resultsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">Babu tattaunawar da ta dace.</p>`;
-            }
         }
 
-        function copyToClipboard(button) {
-            const content = button.closest('.space-y-2').querySelector('.ai-content').innerText;
-            navigator.clipboard.writeText(content).then(() => {
-                const originalIcon = button.innerHTML;
-                button.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> An Kwafa`;
-                setTimeout(() => { button.innerHTML = originalIcon; }, 2000);
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyToClipboard(btn) {
+            const textContent = btn.closest('.space-y-2').querySelector('.ai-content').innerText;
+            navigator.clipboard.writeText(textContent).then(() => {
+                const icon = btn.querySelector('i');
+                icon.className = 'fa-solid fa-check text-green-400';
+                setTimeout(() => {
+                    icon.className = 'fa-regular fa-copy';
+                }, 2000);
             });
         }
 
-        function escapeHtml(str) {
-            return str
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        // Initialize App
-        window.addEventListener("DOMContentLoaded", () => {
+        window.addEventListener('DOMContentLoaded', () => {
             initializeAuth();
             renderHistory();
         });
