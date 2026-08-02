@@ -116,7 +116,7 @@ async def stream_chat(
                 temperature=0.3,
             )
 
-            # An gyara sunan model zuwa ingantaccen wanda Google ke tallafawa yanzu
+            # Amfani da tabbataccen sunan model na Google GenAI SDK
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
                 model="gemini-1.5-flash",
