@@ -1,15 +1,15 @@
 import os
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks
-from groq import Groq
 
+from google import genai
 from core.database import get_chat_collection
 from core.security import get_current_user
 
-router = APIRouter(prefix="/files", tags=["File Processing Engine"])
+router = APIRouter(prefix="/files", tags=["File Processing Engine (Gemini)"])
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 async def log_file_upload(session_id: str, user_email: str, file_info: dict):
     chat_collection = get_chat_collection()
@@ -26,7 +26,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         history.append({"role": "user", "content": f"Uploaded file: {file_info['file_name']}"})
         history.append({
             "role": "system",
-            "content": "[File Uploaded & Processed via Groq Engine]",
+            "content": "[File Uploaded & Processed via Google Gemini Engine]",
             "file_name": file_info["file_name"],
             "mime_type": file_info["mime_type"]
         })
@@ -48,7 +48,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         print(f"🚨 File DB Log Failure: {str(e)}")
 
 @router.post("/upload")
-async def upload_file_to_groq(
+async def upload_file_to_gemini(
     file: UploadFile = File(...),
     session_id: str = Form("default_session"),
     background_tasks: BackgroundTasks = None,
@@ -59,7 +59,7 @@ async def upload_file_to_groq(
         if not client:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="GROQ_API_KEY variable is unconfigured."
+                detail="GEMINI_API_KEY variable is unconfigured."
             )
 
         with open(temp_file_path, "wb") as f:
@@ -76,7 +76,7 @@ async def upload_file_to_groq(
 
         return {
             "status": "success",
-            "engine": "Groq File Processing Engine",
+            "engine": "Google Gemini File Processing Engine",
             **file_info
         }
 
