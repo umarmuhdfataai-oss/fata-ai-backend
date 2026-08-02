@@ -1,6 +1,7 @@
 import json
 import asyncio
 import os
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -72,7 +73,7 @@ async def stream_chat(
                     role="user",
                     parts=[types.Part.from_text(text=user_query)]
                 )
-            ]
+            )
 
             # 3. Tura dukkan tarihi da sabon saƙo zuwa ga Gemini
             response = await asyncio.to_thread(
@@ -93,14 +94,17 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # 4. Adana sabon saƙo da amsar AI a cikin MongoDB
+            # 4. Adana sabon saƙo da amsar AI a cikin MongoDB tare da updated_at don sauƙaƙe tsarin history
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
                 await chat_collection.update_one(
                     {"_id": session_id},
                     {
-                        "$set": {"user_email": user_email},
+                        "$set": {
+                            "user_email": user_email,
+                            "updated_at": datetime.utcnow()
+                        },
                         "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
                     },
                     upsert=True
