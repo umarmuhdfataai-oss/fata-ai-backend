@@ -1,7 +1,6 @@
 import json
 import asyncio
 import os
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -12,7 +11,7 @@ from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
-router = APIRouter(tags=["AI Chat Engine (Gemini)"])
+router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -37,11 +36,10 @@ async def stream_chat(
     user_email = current_user.get("sub", "guest_user")
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
-    
+      
     system_prompt = (
-        "Kai ƙwararren mataimakin fasaha ne da aka gina a kan Google Gemini. "
-        "Ka riƙa amsa dukkan tambayoyin masu amfani kai tsaye cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar yadda Gemini yake yi. "
-        "Kada ka riƙa maimaita faɗin sunanka ko gabatar da kanka a duk lokacin da aka yi maka tambaya, sai dai idan an tambaye ka kai wanene takamaimai. "
+        "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
+        "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar yadda Gemini yake yi. "
         "Yanzu muna cikin shekara ta 2026. Ka kasance mai kaifi, mai fahimtar jigon tattaunawa ta baya, kuma ka tuna duk abin da aka tattauna a cikin wannan zance."
     )
 
@@ -52,7 +50,7 @@ async def stream_chat(
             if req.model and "pro" in req.model.lower():
                 target_model = "gemini-3.6-pro"
 
-            # 1. Ɗauko tsoffin saƙonnin tattaunawa (Chat History) daga MongoDB
+            # 1. Ɗauko tsoffin saƙonnin tattaunawa (Chat History) daga MongoDB domin tuna zance
             chat_collection = get_chat_collection()
             history_contents = []
             
@@ -74,9 +72,9 @@ async def stream_chat(
                     role="user",
                     parts=[types.Part.from_text(text=user_query)]
                 )
-            )
+            ]
 
-            # 3. Tura tarihi da sabon saƙo zuwa ga Gemini ta hanyar streaming
+            # 3. Tura dukkan tarihi da sabon saƙo zuwa ga Gemini
             response = await asyncio.to_thread(
                 client.models.generate_content_stream,
                 model=target_model,
@@ -95,17 +93,14 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # 4. Adana tattaunawar a cikin MongoDB
+            # 4. Adana sabon saƙo da amsar AI a cikin MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
                 await chat_collection.update_one(
                     {"_id": session_id},
                     {
-                        "$set": {
-                            "user_email": user_email,
-                            "updated_at": datetime.utcnow()
-                        },
+                        "$set": {"user_email": user_email},
                         "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
                     },
                     upsert=True

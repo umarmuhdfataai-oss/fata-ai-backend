@@ -62,6 +62,7 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+        /* Markdown Styling Enhancements */
         .ai-content pre {
             background-color: #131314;
             padding: 12px;
@@ -87,6 +88,7 @@
     <!-- SIDEBAR -->
     <aside id="mainSidebar" class="sidebar w-72 flex flex-col justify-between p-3 border-r border-[#282a2c] z-30 shrink-0 relative">
         <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
+            <!-- Sidebar Header -->
             <div class="flex items-center justify-between px-2 pt-2">
                 <div class="flex items-center space-x-2">
                     <button onclick="toggleSidebar()" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Rufe Menu">
@@ -121,49 +123,36 @@
                     <i class="fa-regular fa-image text-base w-5 text-center"></i>
                     <span>Hoto (Images)</span>
                 </div>
-                <div onclick="switchMode('gems')" id="navGems" class="sidebar-item">
-                    <i class="fa-solid fa-gem text-base w-5 text-center text-purple-400"></i>
-                    <span>Gems & Extensions</span>
-                </div>
             </nav>
 
             <hr class="border-[#282a2c]">
 
             <!-- RECENT CHATS HISTORY -->
             <div class="flex-1 overflow-y-auto space-y-1 pr-1">
-                <div class="flex items-center justify-between px-4 mb-2">
-                    <span class="text-xs font-medium text-gray-400">Tattaunawar Baya</span>
-                    <i class="fa-solid fa-clock-rotate-left text-xs text-gray-500"></i>
-                </div>
+                <span class="text-xs font-medium text-gray-400 px-4 block mb-2">Tattaunawar Baya</span>
                 <div id="recentChatsList" class="space-y-1">
                     <!-- History list items injected via JS -->
                 </div>
             </div>
         </div>
 
-        <!-- Bottom User Profile & Settings Bar -->
-        <div class="border-t border-[#282a2c] pt-3 space-y-2">
-            <div onclick="openSettingsModal()" class="sidebar-item cursor-pointer">
-                <i class="fa-solid fa-gear text-base w-5 text-center text-gray-400"></i>
-                <span>Saituna (Settings)</span>
-            </div>
-            <div class="flex items-center justify-between px-2">
-                <div class="flex items-center space-x-3 truncate">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
-                        F
-                    </div>
-                    <div class="truncate">
-                        <p class="text-xs font-semibold text-gray-200 truncate">Fakruddeen</p>
-                        <p class="text-[10px] text-green-400 font-medium flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                            <span id="backendStatus">Connecting...</span>
-                        </p>
-                    </div>
+        <!-- Bottom User Profile Bar -->
+        <div class="border-t border-[#282a2c] pt-3 flex items-center justify-between px-2">
+            <div class="flex items-center space-x-3 truncate">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
+                    F
                 </div>
-                <button onclick="openHelpModal()" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Taimako">
-                    <i class="fa-regular fa-circle-question text-sm"></i>
-                </button>
+                <div class="truncate">
+                    <p class="text-xs font-semibold text-gray-200 truncate">Fakruddeen</p>
+                    <p class="text-[10px] text-green-400 font-medium flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                        <span id="backendStatus">Connecting...</span>
+                    </p>
+                </div>
             </div>
+            <button onclick="alert('Fata AI Ultra Core v3.0 Powered by Google Gemini Architecture.')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
+                <i class="fa-solid fa-gear text-sm"></i>
+            </button>
         </div>
     </aside>
 
@@ -182,16 +171,11 @@
                 </div>
             </div>
 
-            <div class="flex items-center space-x-3">
-                <button onclick="shareCurrentChat()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-gray-300 border border-[#3c4043] text-xs font-medium transition" title="Raba Tattaunawa">
-                    <i class="fa-solid fa-share-nodes text-gray-400"></i>
-                    <span>Raba</span>
-                </button>
-                <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini 3.6 mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
-                    <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
-                    <span>Gemini 3.6 Active</span>
-                </button>
-            </div>
+            <!-- Upgrade / Status Pill Button -->
+            <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
+                <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
+                <span>Gemini Engine Active</span>
+            </button>
         </header>
 
         <!-- CONTENT DISPLAY AREA -->
@@ -231,26 +215,6 @@
                     <img id="generatedImg" class="hidden max-h-[500px] w-full object-contain rounded-xl shadow-lg transition-all duration-300" alt="Generated Output">
                 </div>
             </div>
-
-            <!-- Gems Container -->
-            <div id="gemsContainer" class="hidden w-full space-y-6 my-auto max-w-2xl mx-auto">
-                <div class="text-center space-y-2">
-                    <h2 class="text-2xl font-semibold text-gray-200">Fata AI Gems & Custom Assistants</h2>
-                    <p class="text-xs text-gray-400">Zaɓi ƙwararren mai taimaka maka a kan wani fanni na musamman.</p>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div onclick="quickPrompt('Kai ƙwararren mai koyar da shirye-shiryen kwamfuta ne (Coding Expert). Taimaka min da...') " class="p-4 rounded-2xl bg-[#1e1f20] border border-[#3c4043] hover:border-blue-500 cursor-pointer transition space-y-2">
-                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg"><i class="fa-solid fa-code"></i></div>
-                        <h3 class="font-semibold text-sm text-gray-200">Coding Mentor</h3>
-                        <p class="text-xs text-gray-400">Taimako da binciken kurakurai a cikin Python da sauran harsuna.</p>
-                    </div>
-                    <div onclick="quickPrompt('Kai ƙwararren mai rubuta kasidu ne da fassara harsuna (Writing & Translation Expert)...')" class="p-4 rounded-2xl bg-[#1e1f20] border border-[#3c4043] hover:border-purple-500 cursor-pointer transition space-y-2">
-                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg"><i class="fa-solid fa-pen-nib"></i></div>
-                        <h3 class="font-semibold text-sm text-gray-200">Writing & Translation</h3>
-                        <p class="text-xs text-gray-400">Rubuce-rubuce da fassara tsakanin Turanci da Hausa.</p>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- FLOATING INPUT BAR -->
@@ -265,11 +229,14 @@
             </div>
 
             <form id="inputForm" onsubmit="handleFormSubmit(event)" class="custom-input-bar p-2.5 flex items-center space-x-2">
+                
+                <!-- Plus Button (Attach File) -->
                 <label for="fileUploadInput" class="p-2.5 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white cursor-pointer transition shrink-0" title="Saka Fayil ko Hoto">
                     <i class="fa-solid fa-plus text-base"></i>
                     <input type="file" id="fileUploadInput" class="hidden" onchange="handleFileUpload(event)">
                 </label>
 
+                <!-- Text Input -->
                 <input type="text" id="userInput" placeholder="Rubuta saƙonki ko tambaya a nan..." autocomplete="off"
                        class="flex-1 bg-transparent text-gray-200 text-sm focus:outline-none px-2 placeholder-gray-500">
 
@@ -280,11 +247,11 @@
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
                     <div id="modelDropdown" class="hidden absolute bottom-12 right-0 w-48 bg-[#1e1f20] border border-[#3c4043] rounded-2xl shadow-2xl z-40 py-1.5 text-xs overflow-hidden">
-                        <div onclick="selectModel('gemini-3.6-flash', 'Gemini 3.6')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                        <div onclick="selectModel('Gemini 3.6 Flash', 'Gemini 3.6')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
                             <span>Gemini 3.6 Flash</span>
                             <i class="fa-solid fa-bolt text-blue-400"></i>
                         </div>
-                        <div onclick="selectModel('gemini-3.6-pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                        <div onclick="selectModel('Gemini 3.6 Pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
                             <span>Gemini 3.6 Pro</span>
                             <i class="fa-solid fa-brain text-purple-400"></i>
                         </div>
@@ -305,10 +272,11 @@
                 Fata AI na iya tafka kuskure. Tabbatar da ingancin mahimman bayanai.
             </p>
         </div>
+
     </main>
 
     <!-- SEARCH CHATS MODAL -->
-    <div id="searchModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="searchModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
         <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-lg rounded-3xl p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
                 <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
@@ -321,52 +289,15 @@
         </div>
     </div>
 
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
-                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
-                    <i class="fa-solid fa-gear text-blue-400"></i> Saitunan Tsari (Settings)
-                </h3>
-                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="space-y-3 text-xs text-gray-300">
-                <div class="flex items-center justify-between py-2 border-b border-[#282a2c]">
-                    <span>Yanayin Launi (Dark Theme)</span>
-                    <span class="text-green-400 font-bold">Kunna (Active)</span>
-                </div>
-                <div class="flex items-center justify-between py-2 border-b border-[#282a2c]">
-                    <span>Share Tarihin Tattaunawa</span>
-                    <button onclick="clearAllHistory()" class="px-3 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30">Goge Dukka</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- HELP MODAL -->
-    <div id="helpModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
-                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
-                    <i class="fa-regular fa-circle-question text-blue-400"></i> Taimako (Help)
-                </h3>
-                <button onclick="closeHelpModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <p class="text-xs text-gray-300 leading-relaxed">
-                Fata AI Ultra Core ta dogara ne da tsarin Google Gemini. Zaka iya tattaunawa da ita cikin harshen Hausa ko Turanci, ƙirƙirar hotuna, ko yin amfani da Gems na musamman don sauƙaƙe aikinka.
-            </p>
-        </div>
-    </div>
-
     <!-- JAVASCRIPT ENGINE LOGIC -->
     <script>
-        const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com/api/v2";
+        const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
         let currentSessionId = generateSessionId();
         let userAuthToken = "";
         let currentMode = "chat";
         let attachedFile = null;
         let activeModel = "gemini-3.6-flash";
-        let chatHistoryStore = {};
+        let isRecording = false;
 
         function generateSessionId() {
             return "session_" + Math.random().toString(36).substring(2, 11);
@@ -383,20 +314,16 @@
             const welcomeScreen = document.getElementById("welcomeScreen");
             const chatContainer = document.getElementById("chatContainer");
             const imageContainer = document.getElementById("imageContainer");
-            const gemsContainer = document.getElementById("gemsContainer");
             const title = document.getElementById("currentWorkspaceTitle");
 
             document.querySelectorAll(".sidebar-item").forEach(item => item.classList.remove("active"));
 
-            welcomeScreen.classList.add("hidden");
-            chatContainer.classList.add("hidden");
-            imageContainer.classList.add("hidden");
-            if(gemsContainer) gemsContainer.classList.add("hidden");
-
             if (mode === 'chat') {
                 document.getElementById("navChat").classList.add("active");
-                title.innerText = "Interactive Gemini 3.6 Chat";
+                title.innerText = "Interactive Gemini Chat";
+                imageContainer.classList.add("hidden");
                 if (chatContainer.children.length > 0) {
+                    welcomeScreen.classList.add("hidden");
                     chatContainer.classList.remove("hidden");
                 } else {
                     welcomeScreen.classList.remove("hidden");
@@ -404,17 +331,15 @@
             } else if (mode === 'image') {
                 document.getElementById("navImages").classList.add("active");
                 title.innerText = "Fata AI Image Generator";
+                welcomeScreen.classList.add("hidden");
+                chatContainer.classList.add("hidden");
                 imageContainer.classList.remove("hidden");
-            } else if (mode === 'gems') {
-                document.getElementById("navGems").classList.add("active");
-                title.innerText = "Fata AI Gems & Assistants";
-                if(gemsContainer) gemsContainer.classList.remove("hidden");
             }
         }
 
         async function initializeAuth() {
             try {
-                const res = await fetch(`${API_BASE_URL}/auth/guest`, { method: "POST" });
+                const res = await fetch(`${API_BASE_URL}/api/v2/auth/guest`, { method: "POST" });
                 if (res.ok) {
                     const data = await res.json();
                     userAuthToken = data.access_token;
@@ -436,7 +361,6 @@
         }
 
         function quickPrompt(text) {
-            switchMode('chat');
             document.getElementById("userInput").value = text;
             handleFormSubmit(new Event('submit'));
         }
@@ -468,12 +392,12 @@
             saveToHistory(currentSessionId, message);
 
             const userBubble = document.createElement("div");
-            userBubble.className = "flex justify-end my-4";
+            userBubble.className = "flex justify-end my-4 animate-fadeIn";
             userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed shadow-sm">${escapeHtml(message)}</div>`;
             chatContainer.appendChild(userBubble);
 
             const aiBubble = document.createElement("div");
-            aiBubble.className = "flex items-start space-x-3 my-4";
+            aiBubble.className = "flex items-start space-x-3 my-4 animate-fadeIn";
             aiBubble.innerHTML = `
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">✨</div>
                 <div class="space-y-2 max-w-3xl w-full">
@@ -482,6 +406,9 @@
                     </div>
                     <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
                         <button onclick="copyToClipboard(this)" class="hover:text-white transition" title="Kwafi"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="handleSendChat('${escapeHtml(message).replace(/'/g, "\\'")}')" class="hover:text-white transition" title="Sake Amsawa"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button onclick="this.classList.toggle('text-green-400')" class="hover:text-white transition" title="Yayi"><i class="fa-regular fa-thumbs-up"></i></button>
+                        <button onclick="this.classList.toggle('text-red-400')" class="hover:text-white transition" title="Bai yi ba"><i class="fa-regular fa-thumbs-down"></i></button>
                     </div>
                 </div>
             `;
@@ -491,7 +418,7 @@
             const aiContent = aiBubble.querySelector(".ai-content");
 
             try {
-                let response = await fetch(`${API_BASE_URL}/chat/stream`, {
+                let response = await fetch(`${API_BASE_URL}/api/v2/chat/stream`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userAuthToken}` },
                     body: JSON.stringify({ message: message, session_id: currentSessionId, model: activeModel })
@@ -545,46 +472,68 @@
         async function handleGenerateImage(prompt) {
             const placeholder = document.getElementById("imgPlaceholder");
             const imgElement = document.getElementById("generatedImg");
-            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400 text-xl mr-2"></i> Yana ƙirƙirar hoto...`;
+
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400 text-xl mr-2"></i> Yana ƙirƙirar hoto ta amfani da AI...`;
             placeholder.classList.remove("hidden");
             imgElement.classList.add("hidden");
-            
-            setTimeout(() => {
-                placeholder.classList.add("hidden");
-                imgElement.src = "https://picsum.photos/800/600?random=" + Math.random();
-                imgElement.classList.remove("hidden");
-            }, 2000);
-        }
 
-        function saveToHistory(sessionId, text) {
-            chatHistoryStore[sessionId] = text;
-            renderHistoryList();
-        }
-
-        function renderHistoryList() {
-            const list = document.getElementById("recentChatsList");
-            list.innerHTML = "";
-            for (const [id, title] of Object.entries(chatHistoryStore)) {
-                const item = document.createElement("div");
-                item.className = "sidebar-item truncate text-xs py-2 px-3";
-                item.innerHTML = `<i class="fa-regular fa-message text-gray-400"></i><span class="truncate">${escapeHtml(title)}</span>`;
-                item.onclick = () => { currentSessionId = id; switchMode('chat'); };
-                list.appendChild(item);
+            try {
+                const encodedPrompt = encodeURIComponent(prompt);
+                imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true`;
+                imgElement.onload = () => {
+                    placeholder.classList.add("hidden");
+                    imgElement.classList.remove("hidden");
+                };
+            } catch (err) {
+                placeholder.innerHTML = `<span class="text-red-400">⚠️ An samu kuskure wajen ƙirƙirar hoto.</span>`;
             }
         }
 
-        function escapeHtml(text) {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        function toggleVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Browser ɗin ku bai goyon bayan Voice Input ba.");
+                return;
+            }
+
+            const micBtn = document.getElementById("micBtn");
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ha-NG';
+
+            if (!isRecording) {
+                recognition.start();
+                isRecording = true;
+                micBtn.classList.add("text-red-500", "animate-pulse");
+            } else {
+                recognition.stop();
+                isRecording = false;
+                micBtn.classList.remove("text-red-500", "animate-pulse");
+            }
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById("userInput").value = transcript;
+                micBtn.classList.remove("text-red-500", "animate-pulse");
+                isRecording = false;
+            };
+
+            recognition.onerror = () => {
+                micBtn.classList.remove("text-red-500", "animate-pulse");
+                isRecording = false;
+            };
         }
 
         function toggleModelDropdown() {
             document.getElementById("modelDropdown").classList.toggle("hidden");
         }
 
-        function selectModel(modelId, modelName) {
-            activeModel = modelId;
-            document.getElementById("selectedModelText").innerText = modelName;
+        function selectModel(modelName, badgeText) {
+            if(badgeText === 'Gemini 3.6') {
+                activeModel = "gemini-3.6-flash";
+            } else {
+                activeModel = "gemini-3.6-pro";
+            }
+            document.getElementById("selectedModelText").innerText = badgeText;
             document.getElementById("selectedModelBadge").innerText = modelName;
             document.getElementById("modelDropdown").classList.add("hidden");
         }
@@ -606,41 +555,93 @@
             document.getElementById("attachmentPreview").classList.remove("flex");
         }
 
-        function toggleVoiceRecognition() {
-            alert("Ana shirin samar da damar magana da murya (Voice Input) a nan gaba!");
+        function saveToHistory(sessionId, title) {
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            if (!history.find(h => h.id === sessionId)) {
+                history.unshift({ id: sessionId, title: title.substring(0, 30) + "..." });
+                localStorage.setItem("fata_history", JSON.stringify(history));
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            const listContainer = document.getElementById("recentChatsList");
+            listContainer.innerHTML = "";
+
+            history.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "sidebar-item text-xs justify-between group";
+                div.innerHTML = `
+                    <span onclick="loadChatSession('${item.id}')" class="truncate flex-1">${escapeHtml(item.title)}</span>
+                    <button onclick="deleteHistoryItem('${item.id}')" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1 transition"><i class="fa-solid fa-trash"></i></button>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            history = history.filter(h => h.id !== id);
+            localStorage.setItem("fata_history", JSON.stringify(history));
+            renderHistory();
+        }
+
+        function loadChatSession(id) {
+            currentSessionId = id;
+            switchMode('chat');
+        }
+
+        function openSearchModal() {
+            document.getElementById("searchModal").classList.remove("hidden");
+            filterChatsHistory();
+        }
+
+        function closeSearchModal() {
+            document.getElementById("searchModal").classList.add("hidden");
+        }
+
+        function filterChatsHistory() {
+            const query = document.getElementById("searchInputModal").value.toLowerCase();
+            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
+            const resultsList = document.getElementById("searchResultsList");
+            resultsList.innerHTML = "";
+
+            const filtered = history.filter(h => h.title.toLowerCase().includes(query));
+            filtered.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 transition";
+                div.innerText = item.title;
+                div.onclick = () => {
+                    loadChatSession(item.id);
+                    closeSearchModal();
+                };
+                resultsList.appendChild(div);
+            });
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
         function copyToClipboard(btn) {
-            const content = btn.closest(".space-y-2").querySelector(".ai-content").innerText;
-            navigator.clipboard.writeText(content);
-            alert("An kwafi saƙon!");
+            const contentDiv = btn.closest('.space-y-2').querySelector('.ai-content');
+            navigator.clipboard.writeText(contentDiv.innerText);
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
         }
 
-        function shareCurrentChat() {
-            alert("An kwafi hanyar raba wannan tattaunawa!");
-        }
-
-        function openSearchModal() { document.getElementById("searchModal").classList.remove("hidden"); }
-        function closeSearchModal() { document.getElementById("searchModal").classList.add("hidden"); }
-        function openSettingsModal() { document.getElementById("settingsModal").classList.remove("hidden"); }
-        function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
-        function openHelpModal() { document.getElementById("helpModal").classList.remove("hidden"); }
-        function closeHelpModal() { document.getElementById("helpModal").classList.add("hidden"); }
-        
-        function filterChatsHistory() {
-            // Aikin binciken tattaunawa
-        }
-
-        function clearAllHistory() {
-            chatHistoryStore = {};
-            renderHistoryList();
-            closeSettingsModal();
-            startNewSession();
-        }
-
-        window.onload = () => {
-            initializeAuth();
-        };
+        // Initialize history on load
+        renderHistory();
+        initializeAuth();
     </script>
 </body>
 </html>
