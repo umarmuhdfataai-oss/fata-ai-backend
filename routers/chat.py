@@ -72,7 +72,7 @@ async def stream_chat(
                     role="user",
                     parts=[types.Part.from_text(text=user_query)]
                 )
-            ]
+            )
 
             # 3. Tura dukkan tarihi da sabon saƙo zuwa ga Gemini
             response = await asyncio.to_thread(
