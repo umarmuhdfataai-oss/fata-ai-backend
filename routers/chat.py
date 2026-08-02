@@ -7,16 +7,18 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
-from groq import Groq
+from google import genai
+from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
-router = APIRouter(prefix="/chat", tags=["AI Chat Engine"])
+router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+# Fara ainihin Google GenAI Client
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 class ChatRequest(BaseModel):
     message: str
@@ -30,9 +32,9 @@ async def fetch_tavily_search(query: str) -> str:
     payload = {
         "api_key": TAVILY_API_KEY,
         "query": query,
-        "search_depth": "advanced", # Advanced search don samun cikakken bayani
+        "search_depth": "advanced",
         "max_results": 3,
-        "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com"] # Takaita shafukan da za'a duba
+        "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com"]
     }
     
     try:
@@ -40,16 +42,13 @@ async def fetch_tavily_search(query: str) -> str:
             response = await httpx_client.post(url, json=payload)
             if response.status_code == 200:
                 data = response.json()
-                # Tara abubuwan da aka samo
                 results = data.get("results", [])
                 snippets = []
                 for res in results:
                     if res.get("content"):
-                        # Tabbatar da kwanan wata (idan akwai)
                         snippets.append(f"[{res.get('date', 'N/A')}]: {res.get('content')}")
                 
                 if snippets:
-                    print(f"🔍 Tavily Grounding Success for: '{query}'")
                     return "\n".join(snippets)
     except Exception as e:
         print(f"⚠️ Tavily Search Error: {str(e)}")
@@ -65,60 +64,69 @@ async def stream_chat(
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
     if not client:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not configured.")
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
 
     user_email = current_user.get("sub", "guest_user")
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    # 1. Binciko Intanet domin Grounding
+    # Binciko intanet domin samun ingantattun bayanai
     web_search_context = await fetch_tavily_search(f"Final result of {user_query} in 2026 season")
 
     chat_collection = get_chat_collection()
     
-    # 2. Tsara System Instruction mai karfi (Strict Grounding Rule)
+    # Tsarin umarni na musamman don Gemini
     system_instruction = (
-        "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike mai amfani da Groq LPU Engine. "
+        "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
         "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
         "Yanzu muna cikin shekara ta 2026. "
-        "MUHIMMI: Wajen bada amsa akan batutuwan da suka shafi tarihi ko wasanni (kamar Champions League), "
-        "dole ne ka yi amfani da KAWAI bayanan intanet (Web Search Results) da aka ba ka a ƙasa. "
-        "Kada ka yi hasashe. Idan bayanan intanet sun ce PSG ta lashe kofin 2026 ta hanyar bugun penariti bayan sun tashi 1-1, "
-        "to haka za ka fada. Ka tabbatar ka tsara amsarka da kyau (headings, bolding, lists)."
+        "Ka riƙa amfani da tsari mai kyau (headings, bolding, lists) wajen gabatar da amsoshinka."
     )
 
     if web_search_context:
-        system_instruction += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet (Grounding Data - DAGA MAJALINAN WASANNI)]: \n{web_search_context}"
-        system_instruction += "\n\n(Yi amfani da wadannan bayanan kawai wajen bada amsa ta karshe)."
-    else:
-        system_instruction += "\n\n[Babu cikakken sabon bayanin intanet da aka samo. Ka yi amfani da iliminka na asali wanda aka gitta zuwa 2026]."
+        system_instruction += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
 
-    messages = [{"role": "system", "content": system_instruction}]
-    
+    # Gina tarihin tattaunawa (History) daga MongoDB
+    contents_history = []
     if chat_collection is not None:
         existing_chat = await chat_collection.find_one({"_id": session_id})
         if existing_chat and "messages" in existing_chat:
             for msg in existing_chat["messages"][-6:]:
-                role = "user" if msg["role"] == "user" else "assistant"
-                messages.append({"role": role, "content": msg["content"]})
+                role = "user" if msg["role"] == "user" else "model"
+                contents_history.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    )
+                )
 
-    messages.append({"role": "user", "content": user_query})
+    # Saka sabon saƙon mai amfani a ƙarshe
+    contents_history.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=user_query)]
+        )
+    )
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da llama-3.3-70b-versatile
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.3,
+            )
+
+            # Amfani da ainihin gemini-2.5-flash model
             response_stream = await asyncio.to_thread(
-                client.chat.completions.create,
-                model="llama-3.3-70b-versatile",
-                messages=messages,
-                stream=True,
-                temperature=0.2 # Rage temperature don kara gaskiya (factual accuracy)
+                client.models.generate_content_stream,
+                model="gemini-2.5-flash",
+                contents=contents_history,
+                config=config
             )
 
             for chunk in response_stream:
-                if chunk.choices[0].delta.content:
-                    text_chunk = chunk.choices[0].delta.content
+                if chunk.text:
+                    text_chunk = chunk.text
                     full_assistant_response += text_chunk
                     payload = json.dumps({"content": text_chunk})
                     yield f"data: {payload}\n\n"
@@ -126,6 +134,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
+            # Adana tattaunawar a MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
@@ -138,7 +147,7 @@ async def stream_chat(
                     upsert=True
                 )
         except Exception as e:
-            err_payload = json.dumps({"content": f"⚠️ Kuskure daga Groq Engine: {str(e)}"})
+            err_payload = json.dumps({"content": f"⚠️ Kuskure daga Gemini Engine: {str(e)}"})
             yield f"data: {err_payload}\n\n"
             yield "data: [DONE]\n\n"
 
