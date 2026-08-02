@@ -33,13 +33,14 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
       
+    # Dynamic System Instruction
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
         "UMARNI MAI MUHIMMANCI:\n"
         "1. Ka amsa tambayar da aka yi maka KAI TSAYE.\n"
         "2. KAR KA MAIMAITA gaisuwa ko cewa 'Ni ne Fata AI...' ko gabatar da kanka lokacin amsa tambaya.\n"
-        "3. Yi amfani da kayan bincike (Google Search) don nemo ingantattun sabbin bayanai idan tambayar tana buƙatar hakan.\n"
-        "4. Amsa cikin harshen Hausa ingantacce."
+        "3. Yi amfani da Google Search wajen neman sabbin bayanai na shekarar 2026.\n"
+        "4. Amsa cikin harshen Hausa mai inganci."
     )
 
     async def event_generator():
@@ -49,13 +50,12 @@ async def stream_chat(
             if model and "pro" in model.lower():
                 target_model = "gemini-3.6-pro"
 
-            full_input = f"[SYSTEM INSTRUCTION: {system_prompt}]\n\n[USER QUERY]: {user_query}"
-
-            # Kunna Google Search Grounding a cikinta
+            # Daidaitaccen tsarin kiran Interactions API tare da Google Search Grounding
             stream = client.interactions.create(
                 model=target_model,
-                input=full_input,
-                tools=[{"google_search": {}}],  # Wannan zai ba shi damar binciko Intanet
+                input=user_query,
+                system_instruction=system_prompt,
+                tools=[{"type": "google_search"}],
                 stream=True
             )
 
