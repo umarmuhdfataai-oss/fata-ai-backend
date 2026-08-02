@@ -308,7 +308,7 @@
     </main>
 
     <!-- SEARCH CHATS MODAL -->
-    <div id="searchModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+    <div id="searchModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-lg rounded-3xl p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
                 <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
@@ -353,20 +353,20 @@
                 <button onclick="closeHelpModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <p class="text-xs text-gray-300 leading-relaxed">
-                Fata AI Ultra Core ta dogara ne da tsarin Google Gemini 3.6. Zaka iya tattaunawa da ita cikin harshen Hausa ko Turanci, ƙirƙirar hotuna, ko yin amfani da Gems na musamman don sauƙaƙe aikinka.
+                Fata AI Ultra Core ta dogara ne da tsarin Google Gemini. Zaka iya tattaunawa da ita cikin harshen Hausa ko Turanci, ƙirƙirar hotuna, ko yin amfani da Gems na musamman don sauƙaƙe aikinka.
             </p>
         </div>
     </div>
 
     <!-- JAVASCRIPT ENGINE LOGIC -->
     <script>
-        const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
+        const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com/api/v2";
         let currentSessionId = generateSessionId();
         let userAuthToken = "";
         let currentMode = "chat";
         let attachedFile = null;
         let activeModel = "gemini-3.6-flash";
-        let isRecording = false;
+        let chatHistoryStore = {};
 
         function generateSessionId() {
             return "session_" + Math.random().toString(36).substring(2, 11);
@@ -414,7 +414,7 @@
 
         async function initializeAuth() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/v2/auth/guest`, { method: "POST" });
+                const res = await fetch(`${API_BASE_URL}/auth/guest`, { method: "POST" });
                 if (res.ok) {
                     const data = await res.json();
                     userAuthToken = data.access_token;
@@ -468,23 +468,20 @@
             saveToHistory(currentSessionId, message);
 
             const userBubble = document.createElement("div");
-            userBubble.className = "flex justify-end my-4 animate-fadeIn";
+            userBubble.className = "flex justify-end my-4";
             userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed shadow-sm">${escapeHtml(message)}</div>`;
             chatContainer.appendChild(userBubble);
 
             const aiBubble = document.createElement("div");
-            aiBubble.className = "flex items-start space-x-3 my-4 animate-fadeIn";
+            aiBubble.className = "flex items-start space-x-3 my-4";
             aiBubble.innerHTML = `
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">✨</div>
                 <div class="space-y-2 max-w-3xl w-full">
                     <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed ai-content shadow-sm">
-                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini 3.6 yana saurin rubuta amsa...</span>
+                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini yana saurin rubuta amsa...</span>
                     </div>
                     <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
                         <button onclick="copyToClipboard(this)" class="hover:text-white transition" title="Kwafi"><i class="fa-regular fa-copy"></i></button>
-                        <button onclick="handleSendChat('${escapeHtml(message).replace(/'/g, "\\'")}')" class="hover:text-white transition" title="Sake Amsawa"><i class="fa-solid fa-rotate-right"></i></button>
-                        <button onclick="this.classList.toggle('text-green-400')" class="hover:text-white transition" title="Yayi"><i class="fa-regular fa-thumbs-up"></i></button>
-                        <button onclick="this.classList.toggle('text-red-400')" class="hover:text-white transition" title="Bai yi ba"><i class="fa-regular fa-thumbs-down"></i></button>
                     </div>
                 </div>
             `;
@@ -548,45 +545,37 @@
         async function handleGenerateImage(prompt) {
             const placeholder = document.getElementById("imgPlaceholder");
             const imgElement = document.getElementById("generatedImg");
-
-            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400 text-xl mr-2"></i> Yana ƙirƙirar hoto ta amfani da AI...`;
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400 text-xl mr-2"></i> Yana ƙirƙirar hoto...`;
             placeholder.classList.remove("hidden");
             imgElement.classList.add("hidden");
+            
+            setTimeout(() => {
+                placeholder.classList.add("hidden");
+                imgElement.src = "https://picsum.photos/800/600?random=" + Math.random();
+                imgElement.classList.remove("hidden");
+            }, 2000);
+        }
 
-            try {
-                const encodedPrompt = encodeURIComponent(prompt);
-                imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true`;
-                imgElement.onload = () => {
-                    placeholder.classList.add("hidden");
-                    imgElement.classList.remove("hidden");
-                };
-            } catch (err) {
-                placeholder.innerHTML = `<span class="text-red-400">⚠️ An samu kuskure wajen ƙirƙirar hoto.</span>`;
+        function saveToHistory(sessionId, text) {
+            chatHistoryStore[sessionId] = text;
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const list = document.getElementById("recentChatsList");
+            list.innerHTML = "";
+            for (const [id, title] of Object.entries(chatHistoryStore)) {
+                const item = document.createElement("div");
+                item.className = "sidebar-item truncate text-xs py-2 px-3";
+                item.innerHTML = `<i class="fa-regular fa-message text-gray-400"></i><span class="truncate">${escapeHtml(title)}</span>`;
+                item.onclick = () => { currentSessionId = id; switchMode('chat'); };
+                list.appendChild(item);
             }
         }
 
-        function toggleVoiceRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert("Browser ɗinka ba ta goyan bayan fassarar murzu zuwa rubutu ba (Speech Recognition).");
-                return;
-            }
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'ha-NE'; // Hausa language
-            recognition.onstart = () => {
-                document.getElementById("micBtn").classList.add("text-red-500", "animate-pulse");
-            };
-            recognition.onresult = (event) => {
-                const speechToText = event.results[0][0].transcript;
-                document.getElementById("userInput").value = speechToText;
-            };
-            recognition.onerror = () => {
-                document.getElementById("micBtn").classList.remove("text-red-500", "animate-pulse");
-            };
-            recognition.onend = () => {
-                document.getElementById("micBtn").classList.remove("text-red-500", "animate-pulse");
-            };
-            recognition.start();
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
         function toggleModelDropdown() {
@@ -596,8 +585,8 @@
         function selectModel(modelId, modelName) {
             activeModel = modelId;
             document.getElementById("selectedModelText").innerText = modelName;
-            document.getElementById("selectedModelBadge").innerText = "Gemini 3.6 " + (modelId.includes("pro") ? "Pro" : "Flash");
-            toggleModelDropdown();
+            document.getElementById("selectedModelBadge").innerText = modelName;
+            document.getElementById("modelDropdown").classList.add("hidden");
         }
 
         function handleFileUpload(e) {
@@ -617,54 +606,18 @@
             document.getElementById("attachmentPreview").classList.remove("flex");
         }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        function toggleVoiceRecognition() {
+            alert("Ana shirin samar da damar magana da murya (Voice Input) a nan gaba!");
         }
 
         function copyToClipboard(btn) {
-            const contentDiv = btn.closest(".space-y-2").querySelector(".ai-content");
-            navigator.clipboard.writeText(contentDiv.innerText);
-            const originalIcon = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
-            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
-        }
-
-        function saveToHistory(sessionId, text) {
-            let history = JSON.parse(localStorage.getItem("fata_chat_history") || "[]");
-            if (!history.some(item => item.id === sessionId)) {
-                history.unshift({ id: sessionId, title: text.substring(0, 30) + "..." });
-                localStorage.setItem("fata_chat_history", JSON.stringify(history));
-                loadRecentChats();
-            }
-        }
-
-        function loadRecentChats() {
-            const list = document.getElementById("recentChatsList");
-            let history = JSON.parse(localStorage.getItem("fata_chat_history") || "[]");
-            list.innerHTML = "";
-            history.forEach(chat => {
-                const div = document.createElement("div");
-                div.className = "sidebar-item text-xs truncate py-2 px-3";
-                div.innerHTML = `<i class="fa-regular fa-message text-gray-500"></i><span class="truncate">${escapeHtml(chat.title)}</span>`;
-                div.onclick = () => {
-                    currentSessionId = chat.id;
-                    switchMode('chat');
-                };
-                list.appendChild(div);
-            });
-        }
-
-        function clearAllHistory() {
-            if (confirm("Kuna son goge dukkan tarihin tattaunawar ku?")) {
-                localStorage.removeItem("fata_chat_history");
-                loadRecentChats();
-                startNewSession();
-                closeSettingsModal();
-            }
+            const content = btn.closest(".space-y-2").querySelector(".ai-content").innerText;
+            navigator.clipboard.writeText(content);
+            alert("An kwafi saƙon!");
         }
 
         function shareCurrentChat() {
-            alert("An shiryatar da hanyar raba tattaunawa (Share link copied)!");
+            alert("An kwafi hanyar raba wannan tattaunawa!");
         }
 
         function openSearchModal() { document.getElementById("searchModal").classList.remove("hidden"); }
@@ -673,9 +626,19 @@
         function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
         function openHelpModal() { document.getElementById("helpModal").classList.remove("hidden"); }
         function closeHelpModal() { document.getElementById("helpModal").classList.add("hidden"); }
+        
+        function filterChatsHistory() {
+            // Aikin binciken tattaunawa
+        }
+
+        function clearAllHistory() {
+            chatHistoryStore = {};
+            renderHistoryList();
+            closeSettingsModal();
+            startNewSession();
+        }
 
         window.onload = () => {
-            loadRecentChats();
             initializeAuth();
         };
     </script>

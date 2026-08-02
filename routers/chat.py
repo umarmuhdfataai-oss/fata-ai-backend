@@ -12,7 +12,6 @@ from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
-# An cire prefix="/chat" domin ya zama "/stream" kai tsaye
 router = APIRouter(tags=["AI Chat Engine (Gemini)"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -38,7 +37,7 @@ async def stream_chat(
     user_email = current_user.get("sub", "guest_user")
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
-      
+    
     system_prompt = (
         "Kai ƙwararren mataimakin fasaha ne da aka gina a kan Google Gemini. "
         "Ka riƙa amsa dukkan tambayoyin masu amfani kai tsaye cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar yadda Gemini yake yi. "
