@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 
 from google import genai
+from google.genai import types
 
 from core.database import get_chat_collection
 from core.security import get_current_user
@@ -19,7 +20,7 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("gemini-3.6-flash"),
+    model: Optional[str] = Form("gemini-2.5-flash"),
     file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user)
 ):
@@ -33,49 +34,72 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
       
+    # Umarni na musamman don amsa tambaya kai tsaye kawai
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
-        "KAI WANE NE: Kai ne 'Fata AI' mai amfani da babbar manhajar Google Gemini Ultra Core.\n"
-        "Amsa cikin harshen Hausa mai daɗi, inganci, fahimta, da girmamawa."
+        "UMARNI MAI MUHIMMANCI:\n"
+        "1. Ka ba da amsar tambayar da aka yi maka KAI TSAYE.\n"
+        "2. KAR KA MAIMAITA gaisuwa, gabatar da kanka, ko cewa 'Ni ne Fata AI...' a duk lokacin da aka yi maka tambaya.\n"
+        "3. Idan an yi gaisuwa kawai, za ka iya amsawa a takaice. Amma idan tambaya ce ta ilimi, labarai, ko bayani, JE KAI TSAYE ZUWA AMSAR TAMBAYAR.\n"
+        "4. Amsa cikin harshen Hausa mai kyau, fahimta, da inganci."
     )
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            target_model = "gemini-3.6-flash"
+            target_model = "gemini-2.5-flash"
             if model and "pro" in model.lower():
-                target_model = "gemini-3.6-pro"
+                target_model = "gemini-2.5-pro"
 
-            # Shigar da saƙo ta hanyar Interactions API ta sabon SDK
-            full_input = f"{system_prompt}\n\nMai Amfani: {user_query}"
+            chat_collection = get_chat_collection()
+            history_contents = []
+            
+            # Dauko tarihin tattaunawa daga MongoDB
+            if chat_collection is not None:
+                session_data = await chat_collection.find_one({"_id": session_id})
+                if session_data and "messages" in session_data:
+                    for msg in session_data["messages"]:
+                        role = "user" if msg["role"] == "user" else "model"
+                        history_contents.append(
+                            types.Content(
+                                role=role,
+                                parts=[types.Part.from_text(text=msg["content"])]
+                            )
+                        )
 
-            # Stream response ta hanyar Interactions API
-            stream = client.interactions.create(
+            # Sarrafa hoto/fayil idan an ɗora
+            current_user_parts = []
+            if file:
+                file_bytes = await file.read()
+                mime_type = file.content_type
+                current_user_parts.append(
+                    types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+                )
+            
+            if user_query:
+                current_user_parts.append(types.Part.from_text(text=user_query))
+
+            history_contents.append(types.Content(role="user", parts=current_user_parts))
+
+            # Stream amsar kai tsaye daga Gemini API
+            response = await client.aio.models.generate_content_stream(
                 model=target_model,
-                input=full_input,
-                stream=True
+                contents=history_contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.3,
+                )
             )
 
-            for event in stream:
-                # Ciro rubutu daga gudanarwar 'step.delta' ko amsa
-                if hasattr(event, "delta") and event.delta:
-                    if isinstance(event.delta, dict) and "text" in event.delta:
-                        text_chunk = event.delta["text"]
-                        full_assistant_response += text_chunk
-                        yield f"data: {json.dumps({'content': text_chunk})}\n\n"
-                    elif hasattr(event.delta, "text") and event.delta.text:
-                        text_chunk = event.delta.text
-                        full_assistant_response += text_chunk
-                        yield f"data: {json.dumps({'content': text_chunk})}\n\n"
-                elif hasattr(event, "output_text") and event.output_text:
-                    text_chunk = event.output_text
-                    full_assistant_response += text_chunk
-                    yield f"data: {json.dumps({'content': text_chunk})}\n\n"
+            async for chunk in response:
+                if chunk.text:
+                    full_assistant_response += chunk.text
+                    payload = json.dumps({"content": chunk.text})
+                    yield f"data: {payload}\n\n"
 
             yield "data: [DONE]\n\n"
 
             # Adana tattaunawar a MongoDB
-            chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Hoto/Fayil]"}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
