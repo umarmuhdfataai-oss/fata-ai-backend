@@ -22,7 +22,7 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
-    model: Optional[str] = "gemini-2.5-flash"
+    model: Optional[str] = "gemini-3.6-flash"
 
 async def fetch_tavily_search(query: str) -> str:
     if not TAVILY_API_KEY:
@@ -68,7 +68,7 @@ async def stream_chat(
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    # 1. Yi bincike ta Tavily da farko domin tabbatar da an samu sabbin bayanan 2026
+    # 1. Yi bincike ta Tavily da farko domin tabbatar da an samu sabbin bayananan 2026
     web_search_context = await fetch_tavily_search(user_query)
       
     system_prompt = (
@@ -83,10 +83,10 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da sahihin samfurin da zai bayar da sakamako mai kyau
-            target_model = "gemini-2.5-flash"
+            # An sabunta zuwa samfuran Gemini 3.6
+            target_model = "gemini-3.6-flash"
             if req.model and "pro" in req.model.lower():
-                target_model = "gemini-2.5-pro"
+                target_model = "gemini-3.6-pro"
 
             contents = [
                 types.Content(
