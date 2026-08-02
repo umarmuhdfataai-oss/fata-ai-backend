@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fata AI Ultra Core - Powered by Groq LPU</title>
+    <title>Fata AI Ultra Core - Powered by Google Gemini</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -16,8 +16,8 @@
             color: #e3e3e3;
             font-family: 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        .groq-gradient-text {
-            background: linear-gradient(74deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+        .gemini-gradient-text {
+            background: linear-gradient(74deg, #4285F4 0%, #9B72CB 50%, #D96570 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -49,9 +49,9 @@
             transition: all 0.25s ease;
         }
         .custom-input-bar:focus-within {
-            border-color: #f97316;
+            border-color: #4285F4;
             background-color: #282a2c;
-            box-shadow: 0 4px 25px rgba(249, 115, 22, 0.15);
+            box-shadow: 0 4px 25px rgba(66, 133, 244, 0.15);
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -95,25 +95,25 @@
                         <i class="fa-solid fa-bars text-lg"></i>
                     </button>
                     <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                            ⚡
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
+                            ✨
                         </div>
-                        <span class="font-semibold text-base groq-gradient-text tracking-wide">Fata AI</span>
+                        <span class="font-semibold text-base gemini-gradient-text tracking-wide">Fata AI</span>
                     </div>
                 </div>
             </div>
 
             <!-- New Chat Button -->
             <button onclick="startNewSession()" class="flex items-center space-x-3 w-full px-4 py-3 rounded-full bg-[#131314] hover:bg-[#282a2c] text-gray-200 text-sm font-medium border border-[#3c4043] transition shadow-sm group">
-                <i class="fa-regular fa-pen-to-square text-orange-400 group-hover:scale-110 transition-transform"></i>
+                <i class="fa-regular fa-pen-to-square text-blue-400 group-hover:scale-110 transition-transform"></i>
                 <span>Sabuwar Tattaunawa</span>
             </button>
 
             <!-- Navigation Links -->
             <nav class="space-y-1">
                 <div onclick="switchMode('chat')" id="navChat" class="sidebar-item active">
-                    <i class="fa-regular fa-comment-dots text-base w-5 text-center text-orange-400"></i>
-                    <span>Chat (Groq LPU)</span>
+                    <i class="fa-regular fa-comment-dots text-base w-5 text-center text-blue-400"></i>
+                    <span>Chat (Gemini)</span>
                 </div>
                 <div onclick="openSearchModal()" id="navSearch" class="sidebar-item">
                     <i class="fa-solid fa-magnifying-glass text-base w-5 text-center"></i>
@@ -139,7 +139,7 @@
         <!-- Bottom User Profile Bar -->
         <div class="border-t border-[#282a2c] pt-3 flex items-center justify-between px-2">
             <div class="flex items-center space-x-3 truncate">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-600 to-amber-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
                     F
                 </div>
                 <div class="truncate">
@@ -150,7 +150,7 @@
                     </p>
                 </div>
             </div>
-            <button onclick="alert('Fata AI Ultra Core v3.0 Powered by Groq LPU Engine & Gemini UI Architecture.')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
+            <button onclick="alert('Fata AI Ultra Core v3.0 Powered by Google Gemini Architecture.')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
                 <i class="fa-solid fa-gear text-sm"></i>
             </button>
         </div>
@@ -167,14 +167,14 @@
                 </button>
                 <div class="flex items-center space-x-2">
                     <span id="currentWorkspaceTitle" class="text-base font-semibold text-gray-200">Fata AI Ultra Core</span>
-                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium" id="selectedModelBadge">Llama 3.3 70B</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium" id="selectedModelBadge">Gemini 2.5 Flash</span>
                 </div>
             </div>
 
             <!-- Upgrade / Status Pill Button -->
-            <button onclick="alert('Kuna amfani da ingantaccen tsarin Groq LPU mai matuƙar sauri da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs font-semibold transition shadow-sm">
-                <i class="fa-solid fa-bolt text-orange-400 animate-bounce"></i>
-                <span>Groq High-Speed Active</span>
+            <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
+                <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
+                <span>Gemini Engine Active</span>
             </button>
         </header>
 
@@ -183,18 +183,18 @@
             
             <!-- Default Welcome Screen -->
             <div id="welcomeScreen" class="my-auto text-center space-y-4 px-4">
-                <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 mx-auto flex items-center justify-center text-3xl shadow-xl shadow-orange-500/10 mb-2">
-                    ⚡
+                <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 mx-auto flex items-center justify-center text-3xl shadow-xl shadow-blue-500/10 mb-2">
+                    ✨
                 </div>
                 <h1 class="text-3xl md:text-5xl font-semibold text-gray-200 tracking-tight">
-                    Barka da zuwa, <span class="groq-gradient-text font-bold">Fakruddeen</span>
+                    Barka da zuwa, <span class="gemini-gradient-text font-bold">Fakruddeen</span>
                 </h1>
                 <p class="text-gray-400 text-sm md:text-base max-w-md mx-auto leading-relaxed">
-                    Ina za mu dosa a yau? Fata AI tana aiki ne da gudu mai zafi ta hanyar Groq LPU Engine don sauƙaƙe maka duk wani aiki.
+                    Ina za mu dosa a yau? Fata AI tana aiki ne da tsarin Google Gemini Engine don sauƙaƙe maka duk wani aiki.
                 </p>
                 <div class="flex flex-wrap justify-center gap-2 pt-4">
                     <button onclick="quickPrompt('Rubuta min wani gajeren shiri na fasahar zamani.')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">💻 Shirin Fasaha</button>
-                    <button onclick="quickPrompt('Mene ne fa\'idar Groq LPU a kan sauran AI engines?')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">🚀 Groq LPU Power</button>
+                    <button onclick="quickPrompt('Mene ne fa\'idar Google Gemini a kan sauran AI engines?')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">🚀 Gemini Power</button>
                     <button onclick="quickPrompt('Ka rubuta min waka ta yabon Hausa mai daɗi.')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">📜 Waƙar Hausa</button>
                 </div>
             </div>
@@ -222,7 +222,7 @@
             <!-- Attached File Preview Container -->
             <div id="attachmentPreview" class="hidden items-center justify-between bg-[#1e1f20] border border-[#3c4043] rounded-xl px-4 py-2 mb-2 text-xs text-gray-300">
                 <div class="flex items-center space-x-2 truncate">
-                    <i class="fa-solid fa-paperclip text-orange-400"></i>
+                    <i class="fa-solid fa-paperclip text-blue-400"></i>
                     <span id="attachmentName" class="truncate font-medium">filename.png</span>
                 </div>
                 <button onclick="removeAttachment()" class="text-red-400 hover:text-red-300 ml-2 p-1"><i class="fa-solid fa-xmark"></i></button>
@@ -243,17 +243,17 @@
                 <!-- Model Selector Dropdown -->
                 <div class="relative shrink-0">
                     <button type="button" onclick="toggleModelDropdown()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#131314] border border-[#3c4043] text-xs font-medium text-gray-300 hover:bg-[#282a2c] transition">
-                        <span id="selectedModelText">Llama 3.3</span>
+                        <span id="selectedModelText">Gemini 2.5</span>
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
                     <div id="modelDropdown" class="hidden absolute bottom-12 right-0 w-48 bg-[#1e1f20] border border-[#3c4043] rounded-2xl shadow-2xl z-40 py-1.5 text-xs overflow-hidden">
-                        <div onclick="selectModel('Llama 3.3 70B', 'Llama 3.3')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
-                            <span>Llama 3.3 70B</span>
-                            <i class="fa-solid fa-bolt text-orange-400"></i>
+                        <div onclick="selectModel('Gemini 2.5 Flash', 'Gemini 2.5')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                            <span>Gemini 2.5 Flash</span>
+                            <i class="fa-solid fa-bolt text-blue-400"></i>
                         </div>
-                        <div onclick="selectModel('Mixtral 8x7B', 'Mixtral')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
-                            <span>Mixtral 8x7B</span>
-                            <i class="fa-solid fa-brain text-amber-400"></i>
+                        <div onclick="selectModel('Gemini 2.5 Pro', 'Gemini Pro')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
+                            <span>Gemini 2.5 Pro</span>
+                            <i class="fa-solid fa-brain text-purple-400"></i>
                         </div>
                     </div>
                 </div>
@@ -264,7 +264,7 @@
                 </button>
 
                 <!-- Submit / Send Button -->
-                <button type="submit" id="sendBtn" class="p-2.5 rounded-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white transition shrink-0 shadow-md">
+                <button type="submit" id="sendBtn" class="p-2.5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white transition shrink-0 shadow-md">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </form>
@@ -280,11 +280,11 @@
         <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-lg rounded-3xl p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
                 <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
-                    <i class="fa-solid fa-magnifying-glass text-orange-400"></i> Bincika Tattaunawa
+                    <i class="fa-solid fa-magnifying-glass text-blue-400"></i> Bincika Tattaunawa
                 </h3>
                 <button onclick="closeSearchModal()" class="text-gray-400 hover:text-white p-1.5 rounded-full hover:bg-[#282a2c] transition"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <input type="text" id="searchInputModal" onkeyup="filterChatsHistory()" placeholder="Rubuta kalmar bincike..." class="w-full bg-[#131314] border border-[#3c4043] rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-orange-500 transition">
+            <input type="text" id="searchInputModal" onkeyup="filterChatsHistory()" placeholder="Rubuta kalmar bincike..." class="w-full bg-[#131314] border border-[#3c4043] rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-blue-500 transition">
             <div id="searchResultsList" class="max-h-60 overflow-y-auto space-y-2 pr-1"></div>
         </div>
     </div>
@@ -296,7 +296,7 @@
         let userAuthToken = "";
         let currentMode = "chat";
         let attachedFile = null;
-        let activeModel = "llama-3.3-70b-versatile";
+        let activeModel = "gemini-2.5-flash";
         let isRecording = false;
 
         function generateSessionId() {
@@ -320,7 +320,7 @@
 
             if (mode === 'chat') {
                 document.getElementById("navChat").classList.add("active");
-                title.innerText = "Interactive Groq LPU Chat";
+                title.innerText = "Interactive Gemini Chat";
                 imageContainer.classList.add("hidden");
                 if (chatContainer.children.length > 0) {
                     welcomeScreen.classList.add("hidden");
@@ -401,10 +401,10 @@
             const aiBubble = document.createElement("div");
             aiBubble.className = "flex items-start space-x-3 my-4 animate-fadeIn";
             aiBubble.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">⚡</div>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">✨</div>
                 <div class="space-y-2 max-w-3xl w-full">
                     <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed ai-content shadow-sm">
-                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Groq yana saurin rubuta amsa...</span>
+                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini yana saurin rubuta amsa...</span>
                     </div>
                     <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
                         <button onclick="copyToClipboard(this)" class="hover:text-white transition" title="Kwafi"><i class="fa-regular fa-copy"></i></button>
@@ -475,7 +475,7 @@
             const placeholder = document.getElementById("imgPlaceholder");
             const imgElement = document.getElementById("generatedImg");
 
-            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-orange-400 text-xl mr-2"></i> Yana ƙirƙirar hoto ta amfani da AI...`;
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400 text-xl mr-2"></i> Yana ƙirƙirar hoto ta amfani da AI...`;
             placeholder.classList.remove("hidden");
             imgElement.classList.add("hidden");
 
@@ -530,10 +530,10 @@
         }
 
         function selectModel(modelName, badgeText) {
-            if(badgeText === 'Llama 3.3') {
-                activeModel = "llama-3.3-70b-versatile";
+            if(badgeText === 'Gemini 2.5') {
+                activeModel = "gemini-2.5-flash";
             } else {
-                activeModel = "mixtral-8x7b-32768";
+                activeModel = "gemini-2.5-pro";
             }
             document.getElementById("selectedModelText").innerText = badgeText;
             document.getElementById("selectedModelBadge").innerText = modelName;
@@ -610,33 +610,39 @@
             resultsList.innerHTML = "";
 
             const filtered = history.filter(h => h.title.toLowerCase().includes(query));
-            if (filtered.length === 0) {
-                resultsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">Babu tattaunawa mai wannan sunan.</p>`;
-                return;
-            }
-
             filtered.forEach(item => {
                 const div = document.createElement("div");
-                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-300 transition";
-                div.onclick = () => { loadChatSession(item.id); closeSearchModal(); };
+                div.className = "p-2.5 rounded-xl hover:bg-[#282a2c] cursor-pointer text-xs text-gray-300 transition";
                 div.innerText = item.title;
+                div.onclick = () => {
+                    loadChatSession(item.id);
+                    closeSearchModal();
+                };
                 resultsList.appendChild(div);
             });
         }
 
-        function copyToClipboard(btn) {
-            const text = btn.closest(".space-y-2").querySelector(".ai-content").innerText;
-            navigator.clipboard.writeText(text);
-            btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i>`;
-            setTimeout(() => { btn.innerHTML = `<i class="fa-regular fa-copy"></i>`; }, 2000);
-        }
-
         function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        initializeAuth();
+        function copyToClipboard(btn) {
+            const contentDiv = btn.closest('.space-y-2').querySelector('.ai-content');
+            navigator.clipboard.writeText(contentDiv.innerText);
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
+        }
+
         renderHistory();
+        initializeAuth();
     </script>
 </body>
 </html>
