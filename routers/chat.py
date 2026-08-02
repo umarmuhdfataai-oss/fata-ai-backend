@@ -25,27 +25,32 @@ class ChatRequest(BaseModel):
 
 async def fetch_web_search(query: str) -> str:
     """
-    Binciko intanet ta amfani da DuckDuckGo Search domin samun sabbin bayanai.
+    Ingantaccen binciken intanet ta amfani da DuckDuckGo HTML Search domin samun sabbin bayanai.
     """
     url = "https://html.duckduckgo.com/html/"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     try:
-        async with httpx.AsyncClient(timeout=10.0) as httpx_client:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as httpx_client:
             response = await httpx_client.post(url, data={"q": query}, headers=headers)
             if response.status_code == 200:
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(response.text, "html.parser")
                 results = []
-                for a in soup.find_all("a", class_="result__snippet", limit=3):
-                    text = a.get_text(strip=True)
-                    if text:
+                for result in soup.find_all("div", class_="result", limit=4):
+                    snippet_elem = result.find("a", class_="result__snippet")
+                    if snippet_elem:
+                        text = snippet_elem.get_text(strip=True)
                         results.append(text)
+                
                 if results:
-                    return " | ".join(results)
+                    combined = " \n".join(results)
+                    print(f"🔍 Web Search Success for '{query}': Found {len(results)} results.")
+                    return combined
     except Exception as e:
         print(f"⚠️ Web search error: {str(e)}")
+    
     return ""
 
 @router.post("/stream")
@@ -70,16 +75,16 @@ async def stream_chat(
 
     user_query = req.message.strip()
 
-    # Binciko yanar gizo idan tambayar tana bukatar sabon bayani
+    # Binciko yanar gizo kafin amsawa
     search_context = await fetch_web_search(user_query)
 
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
     
     system_instruction = (
-        "Ni ne Fata AI, mataimakin fasaha mai amfani da Groq LPU Engine. "
-        "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe. "
-        "Idan aka baka sakamakon binciken intanet (Web Search Results) a ƙasa, kayi amfani da su wajen bada ingantacciyar amsa ta yanzu."
+        "Kai ne Fata AI, babban mataimakin fasaha mai amfani da Groq LPU Engine. "
+        "Amsa tambayoyi cikin harshen Hausa mai kyau da fahimta. "
+        "Ga shi nan an binciko bayanan intanet na yanzu (Web Search Context) domin su taimaka maka wajen bada ingantacciyar amsa mai daidai da halin da ake ciki a yau:"
     )
 
     if search_context:
@@ -105,7 +110,7 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da llama-3.3-70b-versatile don samun ingantattun amsoshi masu ƙarfi
+            # Amfani da llama-3.3-70b-versatile
             response_stream = await asyncio.to_thread(
                 client.chat.completions.create,
                 model="llama-3.3-70b-versatile",
