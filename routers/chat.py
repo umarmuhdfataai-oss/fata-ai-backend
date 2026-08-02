@@ -1,8 +1,9 @@
 import asyncio
 import json
 import os
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+import base64
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -11,44 +12,46 @@ from google.genai import types
 from core.database import get_chat_collection
 from core.security import get_current_user
 
-router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini 3.6)"])
+router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini Ultra Core)"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-class ChatRequest(BaseModel):
-    message: str
-    session_id: Optional[str] = None
-    model: Optional[str] = "gemini-3.6-flash"
-
-
 @router.post("/stream")
 async def stream_chat(
-    req: ChatRequest,
+    message: str = Form(...),
+    session_id: Optional[str] = Form(None),
+    model: Optional[str] = Form("gemini-3.6-flash"),
+    file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user)
 ):
-    if not req.message or not req.message.strip():
-        raise HTTPException(status_code=400, detail="Saƙo ba zai iya kasancewa wofi ba.")
+    if not message and not file:
+        raise HTTPException(status_code=400, detail="Saƙo ko fayil yana buƙatar kasancewa.")
 
     if not client:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY ba a tsara shi ba.")
 
     user_email = current_user.get("sub", "guest_user")
-    session_id = req.session_id if req.session_id else "default_session"
-    user_query = req.message.strip()
+    session_id = session_id if session_id else "default_session"
+    user_query = message.strip() if message else ""
       
     system_prompt = (
-        "Kai ne Gemini, babban mataimakin AI na Google. "
-        "Yi amfani da salo da dabarun Gemini na asali wajen amsa tambayoyi cikin harshen Hausa mai kyau, gaskiya, amfani, da cikakken bayani. "
-        "Amsa cikin tsari na gaskiya da kaifin tunani, tare da amfani da kwanan wata na yanzu (2026)."
+        "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
+        "KAI WANE NE: Kai ne 'Fata AI' mai amfani da babbar manhajar Google Gemini Ultra Core. "
+        "Kuna da babban tunani, zurfin fahimta, damar riƙe dogon tarihi (Long-context memory), da karanta hotuna/fayiloli.\n\n"
+        "TSARIN AMSA SAKO (INSTRUCTIONS):\n"
+        "1. Yi amfani da dukkan bayanan da ke cikin tarihin tattaunawarku da mai amfani don ba da amsa mai kyau.\n"
+        "2. Idan mai amfani ya tura hoto ko fayil, bincika hoton da kyau sannan ka ba da bayani a kansa.\n"
+        "3. Idan an yi tambaya game da abubuwan da ke faruwa a duniyar yanzu (kamar wasanni, labarai, siyasa), "
+        "KOYAUSHE yi amfani da kayan bincike na Google Search don gano ainihin abin da ke faruwa a shekarar 2026.\n"
+        "4. Amsa cikin harshen Hausa mai daɗi, inganci, fahimta, da girmamawa."
     )
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da samfurin Gemini 3.6 
             target_model = "gemini-3.6-flash"
-            if req.model and "pro" in req.model.lower():
+            if model and "pro" in model.lower():
                 target_model = "gemini-3.6-pro"
 
             chat_collection = get_chat_collection()
@@ -67,26 +70,32 @@ async def stream_chat(
                             )
                         )
 
-            # 2. Sanya sabon saƙon mai amfani
-            history_contents.append(
-                types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=user_query)]
+            # 2. Sarrafa Hoto idan an tura (Vision capability)
+            current_user_parts = []
+            if file:
+                file_bytes = await file.read()
+                mime_type = file.content_type
+                current_user_parts.append(
+                    types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
                 )
-            )
+            
+            if user_query:
+                current_user_parts.append(types.Part.from_text(text=user_query))
 
-            # 3. Tsarin Binciken Intanet na Kayan Aiki (Google Search)
+            history_contents.append(types.Content(role="user", parts=current_user_parts))
+
+            # 3. Kayan Bincike na Google Search & Code Execution
             search_tool = types.Tool(google_search=types.GoogleSearch())
+            code_exec_tool = types.Tool(code_execution=types.CodeExecution())
 
-            # 4. Tura saƙo zuwa Gemini 3.6 Engine
-            # An yi amfani da client.aio wanda yake na asali a Async Python
+            # 4. Aika saƙo ta hanyar Async Stream
             response = await client.aio.models.generate_content_stream(
                 model=target_model,
                 contents=history_contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    temperature=0.7,
-                    tools=[search_tool]  # An ƙara Google Search domin sabunta bayanai zuwa shekarar 2026
+                    temperature=0.4,
+                    tools=[search_tool, code_exec_tool]
                 )
             )
 
@@ -98,9 +107,9 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # 5. Adana sakamako a MongoDB
+            # 5. Adana a MongoDB
             if chat_collection is not None:
-                new_user_msg = {"role": "user", "content": user_query}
+                new_user_msg = {"role": "user", "content": user_query or "[Hoto/Fayil]"}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
                 await chat_collection.update_one(
                     {"_id": session_id},
