@@ -1,6 +1,6 @@
-import os
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks
+import os
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 
 from google import genai
 from core.database import get_chat_collection
@@ -14,7 +14,6 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 async def log_file_upload(session_id: str, user_email: str, file_info: dict):
     chat_collection = get_chat_collection()
     if chat_collection is None:
-        print("🚨 File DB Log Failure: Chat collection is not initialized.")
         return
     
     try:
@@ -23,7 +22,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
         if existing_chat:
             history = existing_chat.get("messages", [])
         
-        history.append({"role": "user", "content": f"Uploaded file: {file_info['file_name']}"})
+        history.append({"role": "user", "content": f"File uploaded: {file_info['file_name']}"})
         history.append({
             "role": "system",
             "content": "[File Uploaded & Processed via Google Gemini Engine]",
@@ -38,7 +37,7 @@ async def log_file_upload(session_id: str, user_email: str, file_info: dict):
                     "user_email": user_email,
                     "messages": history,
                     "chat_mode": "file_upload",
-                    "title": "AI File Workspace",
+                    "title": "Gemini File Workspace",
                     "updated_at": datetime.datetime.now(datetime.timezone.utc)
                 }
             },
@@ -62,30 +61,33 @@ async def upload_file_to_gemini(
                 detail="GEMINI_API_KEY variable is unconfigured."
             )
 
+        contents = await file.read()
         with open(temp_file_path, "wb") as f:
-            f.write(await file.read())
+            f.write(contents)
+
+        # Upload fayil zuwa gidan Gemini Files API
+        gemini_file = client.files.upload(file=temp_file_path)
 
         file_info = {
             "file_name": file.filename,
-            "mime_type": file.content_type or "application/octet-stream"
+            "mime_type": file.content_type or "application/octet-stream",
+            "gemini_uri": gemini_file.uri
         }
 
         user_email = current_user.get("sub", "guest_user")
         if background_tasks:
             background_tasks.add_task(log_file_upload, session_id, user_email, file_info)
 
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
         return {
             "status": "success",
-            "engine": "Google Gemini File Processing Engine",
+            "engine": "Google Gemini Multimodal File Engine",
             **file_info
         }
 
-    except HTTPException as he:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
-        raise he
     except Exception as e:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
-        print(f"🚨 Unexpected file upload error: {str(e)}")
-        raise HTTPException(status_code=500, detail="File engine internal failure.")
+        raise HTTPException(status_code=500, detail=f"File Engine Failure: {str(e)}")

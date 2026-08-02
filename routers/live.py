@@ -1,15 +1,14 @@
-import os
-import datetime
 import asyncio
+import datetime
+import os
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from core.database import get_chat_collection
 
-router = APIRouter(prefix="/live", tags=["Real-time Audio Engine"])
+router = APIRouter(prefix="/live", tags=["Real-time Gemini Audio Engine"])
 
 async def log_live_audio(session_id: str, user_email: str, event: str):
     chat_collection = get_chat_collection()
     if chat_collection is None:
-        print("🚨 Live Audio DB Log Failure: Chat collection is not initialized.")
         return
     
     try:
@@ -31,7 +30,7 @@ async def log_live_audio(session_id: str, user_email: str, event: str):
                     "user_email": user_email,
                     "messages": history,
                     "chat_mode": "live_audio",
-                    "title": "AI Live Audio Session",
+                    "title": "Gemini Live Session",
                     "updated_at": datetime.datetime.now(datetime.timezone.utc)
                 }
             },
@@ -50,18 +49,14 @@ async def live_audio_socket(websocket: WebSocket):
         return
         
     try:
-        await websocket.send_text("Fata AI Live Stream Engine (Powered by Gemini) connected successfully.")
-        
+        await websocket.send_text("Gemini Live Real-time Audio Engine connected successfully.")
         asyncio.create_task(log_live_audio("live_session", "guest_user", "Live Gemini session started."))
         
         while True:
             data = await websocket.receive_bytes()
-            asyncio.create_task(log_live_audio("live_session", "guest_user", f"Received {len(data)} bytes of streaming data."))
+            asyncio.create_task(log_live_audio("live_session", "guest_user", f"Received {len(data)} bytes of audio data."))
             
     except WebSocketDisconnect:
-        print("⚡ Live Socket Client Disconnected gracefully.")
         asyncio.create_task(log_live_audio("live_session", "guest_user", "Live audio session disconnected."))
     except Exception as e:
-        print(f"🚨 Live Audio Pipeline Error: {str(e)}")
-        asyncio.create_task(log_live_audio("live_session", "guest_user", f"Error: {str(e)}"))
         await websocket.close(code=1011, reason=str(e))
