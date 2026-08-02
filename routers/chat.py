@@ -12,7 +12,8 @@ from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
-router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
+# An cire prefix="/chat" domin ya zama "/stream" kai tsaye
+router = APIRouter(tags=["AI Chat Engine (Gemini)"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
