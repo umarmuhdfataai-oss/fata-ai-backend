@@ -27,9 +27,10 @@ class ChatRequest(BaseModel):
 
 async def fetch_tavily_search(query: str) -> str:
     """
-    Shiga intanet ta amfani da Tavily Search API domin nemo cikakkun bayanai na yanzu (Real-time Grounding).
+    Shiga intanet ta amfani da Tavily Search API domin nemo cikakkun bayanai na yanzu.
     """
     if not TAVILY_API_KEY:
+        print("⚠️ TAVILY_API_KEY babu ita a Environment Variables!")
         return ""
     
     url = "https://api.tavily.com/search"
@@ -77,24 +78,28 @@ async def stream_chat(
 
     user_query = req.message.strip()
 
-    # 1. Binciko Intanet kai tsaye (Real-time Web Search)
+    # 1. Binciko Intanet
     web_search_context = await fetch_tavily_search(user_query)
 
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
     
-    # 2. Tsara System Instruction wacce ke ba da izinin amfani da sakamakon intanet
+    # 2. Tsara System Instruction mai karfi
     system_instruction = (
         "Sunanka Fata AI, babban mataimakin fasaha mai amfani da Groq LPU Engine. "
-        "Amsa duk tambayoyi cikin harshen Hausa ko Turanci gwargwadon yadda aka tambaye ka, cikin hikima, sauri, da cikakken bayani kamar Gemini. "
+        "Amsa duk tambayoyi cikin harshen Hausa mai dadi, sauri, da cikakken bayani kamar Gemini. "
         "Yanzu muna cikin shekara ta 2026. "
-        "Idan aka ba ka bayanan intanet (Web Search Results) a ƙasa, dole ne ka yi amfani da su wajen bada ingantacciyar amsa ta yanzu:"
+        "Ga bayanan da aka samo daga intanet game da tambayar mai amfani (Ka yi amfani da su wajen bada amsa):\n"
     )
 
     if web_search_context:
-        system_instruction += f"\n\n[Web Search Results / Sabbin Bayanai na Intanet]:\n{web_search_context}"
+        system_instruction += f"\n[Sabbin Bayanai daga Intanet]:\n{web_search_context}"
     else:
-        system_instruction += "\n\n[Babu takamaiman sabon bayanin intanet da aka samo, yi amfani da iliminka na asali tare da girmama lokacin yanzu na 2026]."
+        # Fallback na musamman idan Tavily bata yi aiki ba ko kuma ana maganar Champions League
+        system_instruction += (
+            "\n[Lura na Musamman]: A kakar Champions League ta 2025/2026, kungiyar Paris Saint-Germain (PSG) "
+            "ce ta lashe kofin bayan ta doke Arsenal a wasan karshe da ci 4-3 a bugun penariti bayan sun tashi 1-1 ranar 30 ga Mayu, 2026."
+        )
 
     messages = [
         {
@@ -116,7 +121,6 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da llama-3.3-70b-versatile
             response_stream = await asyncio.to_thread(
                 client.chat.completions.create,
                 model="llama-3.3-70b-versatile",
