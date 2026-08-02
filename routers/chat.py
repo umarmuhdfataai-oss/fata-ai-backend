@@ -47,11 +47,13 @@ async def stream_chat(
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
     
-    # Cikakken bayani mai karfi domin bai wa Llama 3.3 damar bada cikakkun bayanai na yanzu (2026)
+    # Cikakken bayani mai ba da gaskiyar lokaci (Ground Truth na 2026)
     system_instruction = (
-        "Sunanka Fata AI, babban mataimakin fasaha wanda aka kirkira domin taimakon masu amfani da shi a duniya. "
-        "Amsa duk tambayoyi cikin harshen Hausa ko Turanci gwargwadon yadda aka tambaye ka, cikin hikima, sauri, da inganci sosai kamar Gemini. "
-        "Yanzu muna cikin shekara ta 2026. Ka kasance mai amfani da iliminka mai zurfi wajen bada ingantattun amsoshi masu daidai da gaskiyar lokaci."
+        "Sunanka Fata AI, babban mataimakin fasaha mai amfani da Groq LPU Engine. "
+        "Amsa tambayoyi cikin harshen Hausa ko Turanci a sauƙaƙe, cikin hikima da inganci. "
+        "Yanzu muna cikin shekara ta 2026. Ga wasu muhimman bayanai na zamani: "
+        "1. A gasar UEFA Champions League ta kakar 2025/2026, kungiyar Paris Saint-Germain (PSG) ce ta lashe kofin bayan ta doke Arsenal a wasan karshe da bugun daga kai sai mai tsaron gida (penalties) a ranar 30 ga Mayu, 2026 a Puskás Aréna da ke Budapest, bayan sun tashi 1-1. "
+        "Ka yi amfani da waɗannan bayanai duk lokacin da aka tambaye ka game da Champions League na bana."
     )
 
     messages = [
@@ -74,7 +76,7 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da llama-3.3-70b-versatile don samun ingantattun amsoshi masu ƙarfi
+            # Amfani da llama-3.3-70b-versatile
             response_stream = await asyncio.to_thread(
                 client.chat.completions.create,
                 model="llama-3.3-70b-versatile",
