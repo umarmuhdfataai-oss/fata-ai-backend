@@ -123,36 +123,49 @@
                     <i class="fa-regular fa-image text-base w-5 text-center"></i>
                     <span>Hoto (Images)</span>
                 </div>
+                <div onclick="switchMode('gems')" id="navGems" class="sidebar-item">
+                    <i class="fa-solid fa-gem text-base w-5 text-center text-purple-400"></i>
+                    <span>Gems & Extensions</span>
+                </div>
             </nav>
 
             <hr class="border-[#282a2c]">
 
             <!-- RECENT CHATS HISTORY -->
             <div class="flex-1 overflow-y-auto space-y-1 pr-1">
-                <span class="text-xs font-medium text-gray-400 px-4 block mb-2">Tattaunawar Baya</span>
+                <div class="flex items-center justify-between px-4 mb-2">
+                    <span class="text-xs font-medium text-gray-400">Tattaunawar Baya</span>
+                    <i class="fa-solid fa-clock-rotate-left text-xs text-gray-500"></i>
+                </div>
                 <div id="recentChatsList" class="space-y-1">
                     <!-- History list items injected via JS -->
                 </div>
             </div>
         </div>
 
-        <!-- Bottom User Profile Bar -->
-        <div class="border-t border-[#282a2c] pt-3 flex items-center justify-between px-2">
-            <div class="flex items-center space-x-3 truncate">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
-                    F
-                </div>
-                <div class="truncate">
-                    <p class="text-xs font-semibold text-gray-200 truncate">Fakruddeen</p>
-                    <p class="text-[10px] text-green-400 font-medium flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                        <span id="backendStatus">Connecting...</span>
-                    </p>
-                </div>
+        <!-- Bottom User Profile & Settings Bar -->
+        <div class="border-t border-[#282a2c] pt-3 space-y-2">
+            <div onclick="openSettingsModal()" class="sidebar-item cursor-pointer">
+                <i class="fa-solid fa-gear text-base w-5 text-center text-gray-400"></i>
+                <span>Saituna (Settings)</span>
             </div>
-            <button onclick="alert('Fata AI Ultra Core v3.0 Powered by Google Gemini Architecture.')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
-                <i class="fa-solid fa-gear text-sm"></i>
-            </button>
+            <div class="flex items-center justify-between px-2">
+                <div class="flex items-center space-x-3 truncate">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
+                        F
+                    </div>
+                    <div class="truncate">
+                        <p class="text-xs font-semibold text-gray-200 truncate">Fakruddeen</p>
+                        <p class="text-[10px] text-green-400 font-medium flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                            <span id="backendStatus">Connecting...</span>
+                        </p>
+                    </div>
+                </div>
+                <button onclick="openHelpModal()" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Taimako">
+                    <i class="fa-regular fa-circle-question text-sm"></i>
+                </button>
+            </div>
         </div>
     </aside>
 
@@ -171,11 +184,18 @@
                 </div>
             </div>
 
-            <!-- Upgrade / Status Pill Button -->
-            <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
-                <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
-                <span>Gemini Engine Active</span>
-            </button>
+            <div class="flex items-center space-x-3">
+                <!-- Share / Export Chat Button -->
+                <button onclick="shareCurrentChat()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-gray-300 border border-[#3c4043] text-xs font-medium transition" title="Raba Tattaunawa">
+                    <i class="fa-solid fa-share-nodes text-gray-400"></i>
+                    <span>Raba</span>
+                </button>
+                <!-- Upgrade / Status Pill Button -->
+                <button onclick="alert('Kuna amfani da ingantaccen tsarin Google Gemini mai matuƙar hankali da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold transition shadow-sm">
+                    <i class="fa-solid fa-bolt text-blue-400 animate-bounce"></i>
+                    <span>Gemini Engine Active</span>
+                </button>
+            </div>
         </header>
 
         <!-- CONTENT DISPLAY AREA -->
@@ -213,6 +233,26 @@
                         <i class="fa-regular fa-image text-lg"></i> Hotonka zai bayyana a nan...
                     </span>
                     <img id="generatedImg" class="hidden max-h-[500px] w-full object-contain rounded-xl shadow-lg transition-all duration-300" alt="Generated Output">
+                </div>
+            </div>
+
+            <!-- Gems Container -->
+            <div id="gemsContainer" class="hidden w-full space-y-6 my-auto max-w-2xl mx-auto">
+                <div class="text-center space-y-2">
+                    <h2 class="text-2xl font-semibold text-gray-200">Fata AI Gems & Custom Assistants</h2>
+                    <p class="text-xs text-gray-400">Zaɓi ƙwararren mai taimaka maka a kan wani fanni na musamman.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div onclick="quickPrompt('Kai ƙwararren mai koyar da shirye-shiryen kwamfuta ne (Coding Expert). Taimaka min da...') " class="p-4 rounded-2xl bg-[#1e1f20] border border-[#3c4043] hover:border-blue-500 cursor-pointer transition space-y-2">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg"><i class="fa-solid fa-code"></i></div>
+                        <h3 class="font-semibold text-sm text-gray-200">Coding Mentor</h3>
+                        <p class="text-xs text-gray-400">Taimako da binciken kurakurai a cikin Python da sauran harsuna.</p>
+                    </div>
+                    <div onclick="quickPrompt('Kai ƙwararren mai rubuta kasidu ne da fassara harsuna (Writing & Translation Expert)...')" class="p-4 rounded-2xl bg-[#1e1f20] border border-[#3c4043] hover:border-purple-500 cursor-pointer transition space-y-2">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg"><i class="fa-solid fa-pen-nib"></i></div>
+                        <h3 class="font-semibold text-sm text-gray-200">Writing & Translation</h3>
+                        <p class="text-xs text-gray-400">Rubuce-rubuce da fassara tsakanin Turanci da Hausa.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -289,6 +329,28 @@
         </div>
     </div>
 
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-blue-400"></i> Saitunan Tsari (Settings)
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs text-gray-300">
+                <div class="flex items-center justify-between py-2 border-b border-[#282a2c]">
+                    <span>Yanayin Launi (Dark Theme)</span>
+                    <span class="text-green-400 font-bold">Kunna (Active)</span>
+                </div>
+                <div class="flex items-center justify-between py-2 border-b border-[#282a2c]">
+                    <span>Share Tarihin Tattaunawa</span>
+                    <button onclick="clearAllHistory()" class="px-3 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30">Goge Dukka</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JAVASCRIPT ENGINE LOGIC -->
     <script>
         const API_BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
@@ -314,16 +376,20 @@
             const welcomeScreen = document.getElementById("welcomeScreen");
             const chatContainer = document.getElementById("chatContainer");
             const imageContainer = document.getElementById("imageContainer");
+            const gemsContainer = document.getElementById("gemsContainer");
             const title = document.getElementById("currentWorkspaceTitle");
 
             document.querySelectorAll(".sidebar-item").forEach(item => item.classList.remove("active"));
 
+            welcomeScreen.classList.add("hidden");
+            chatContainer.classList.add("hidden");
+            imageContainer.classList.add("hidden");
+            if(gemsContainer) gemsContainer.classList.add("hidden");
+
             if (mode === 'chat') {
                 document.getElementById("navChat").classList.add("active");
                 title.innerText = "Interactive Gemini Chat";
-                imageContainer.classList.add("hidden");
                 if (chatContainer.children.length > 0) {
-                    welcomeScreen.classList.add("hidden");
                     chatContainer.classList.remove("hidden");
                 } else {
                     welcomeScreen.classList.remove("hidden");
@@ -331,9 +397,11 @@
             } else if (mode === 'image') {
                 document.getElementById("navImages").classList.add("active");
                 title.innerText = "Fata AI Image Generator";
-                welcomeScreen.classList.add("hidden");
-                chatContainer.classList.add("hidden");
                 imageContainer.classList.remove("hidden");
+            } else if (mode === 'gems') {
+                document.getElementById("navGems").classList.add("active");
+                title.innerText = "Fata AI Gems & Assistants";
+                if(gemsContainer) gemsContainer.classList.remove("hidden");
             }
         }
 
@@ -361,6 +429,7 @@
         }
 
         function quickPrompt(text) {
+            switchMode('chat');
             document.getElementById("userInput").value = text;
             handleFormSubmit(new Event('submit'));
         }
@@ -587,6 +656,12 @@
             renderHistory();
         }
 
+        function clearAllHistory() {
+            localStorage.removeItem("fata_history");
+            renderHistory();
+            closeSettingsModal();
+        }
+
         function loadChatSession(id) {
             currentSessionId = id;
             switchMode('chat');
@@ -601,47 +676,37 @@
             document.getElementById("searchModal").classList.add("hidden");
         }
 
-        function filterChatsHistory() {
-            const query = document.getElementById("searchInputModal").value.toLowerCase();
-            let history = JSON.parse(localStorage.getItem("fata_history") || "[]");
-            const resultsList = document.getElementById("searchResultsList");
-            resultsList.innerHTML = "";
+        function openSettingsModal() {
+            document.getElementById("settingsModal").classList.remove("hidden");
+        }
 
-            const filtered = history.filter(h => h.title.toLowerCase().includes(query));
-            filtered.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-200 transition";
-                div.innerText = item.title;
-                div.onclick = () => {
-                    loadChatSession(item.id);
-                    closeSearchModal();
-                };
-                resultsList.appendChild(div);
-            });
+        function closeSettingsModal() {
+            document.getElementById("settingsModal").classList.add("hidden");
+        }
+
+        function openHelpModal() {
+            alert("Fata AI Ultra Core v3.0 - An ƙera ta musamman domin bayar da ƙwarewa irin ta Google Gemini tare da tallafin harshen Hausa.");
+        }
+
+        function shareCurrentChat() {
+            alert("An kwafi hanyar tattaunawar (Link) domin raba wa wasu!");
         }
 
         function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
         }
 
         function copyToClipboard(btn) {
-            const contentDiv = btn.closest('.space-y-2').querySelector('.ai-content');
-            navigator.clipboard.writeText(contentDiv.innerText);
-            const originalIcon = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
-            setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
+            const content = btn.closest('.space-y-2').querySelector('.ai-content').innerText;
+            navigator.clipboard.writeText(content);
+            alert("An kwafi amsar!");
         }
 
-        // Initialize history on load
-        renderHistory();
-        initializeAuth();
+        window.onload = () => {
+            initializeAuth();
+            renderHistory();
+        };
     </script>
 </body>
 </html>

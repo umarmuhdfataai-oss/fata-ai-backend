@@ -23,6 +23,7 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+    model: Optional[str] = "gemini-2.5-flash"
 
 async def fetch_tavily_search(query: str) -> str:
     if not TAVILY_API_KEY:
@@ -33,8 +34,8 @@ async def fetch_tavily_search(query: str) -> str:
         "api_key": TAVILY_API_KEY,
         "query": query,
         "search_depth": "advanced",
-        "max_results": 3,
-        "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com"]
+        "max_results": 4,
+        "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com", "en.wikipedia.org"]
     }
      
     try:
@@ -68,9 +69,26 @@ async def stream_chat(
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    web_search_context = await fetch_tavily_search(f"Final result of {user_query} in 2026 season")
+    # Dauko tsohon tarihi daga MongoDB domin ba wa AI damar fahimtar jigon maganar
     chat_collection = get_chat_collection()
-     
+    previous_messages = []
+    
+    if chat_collection is not None:
+        existing_session = await chat_collection.find_one({"_id": session_id})
+        if existing_session and "messages" in existing_session:
+            # Dauko sakonni 10 na karshe domin adana memory
+            for msg in existing_session["messages"][-10:]:
+                role = "user" if msg.get("role") == "user" else "model"
+                previous_messages.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg.get("content", ""))]
+                    )
+                )
+
+    # Yin binciken Intanet ta Tavily idan tambayar tana bukatar sabon bayani na 2026
+    web_search_context = await fetch_tavily_search(user_query)
+      
     system_prompt = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
         "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
@@ -79,16 +97,28 @@ async def stream_chat(
     )
 
     if web_search_context:
-        system_prompt += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
+        system_prompt += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet na 2026]: \n{web_search_context}"
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da daidaitaccen tsarin gemini-3.6-flash na backend ɗinka
+            # Tabbatar da amfani da sahihin model kamar gemini-2.5-flash ko gemini-2.5-pro
+            target_model = "gemini-2.5-flash"
+            if req.model and "pro" in req.model.lower():
+                target_model = "gemini-2.5-pro"
+
+            # Haɗa tsohon tarihi da sabon sako a matsayin contents
+            contents = previous_messages + [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=user_query)]
+                )
+            ]
+
             response = await asyncio.to_thread(
                 client.models.generate_content_stream,
-                model="gemini-3.6-flash",
-                contents=user_query,
+                model=target_model,
+                contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.7,
@@ -103,6 +133,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
+            # Ajiye sakon a MongoDB
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
