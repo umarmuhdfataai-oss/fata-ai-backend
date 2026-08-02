@@ -7,9 +7,6 @@ from core.database import get_chat_collection
 router = APIRouter(prefix="/live", tags=["Real-time Audio Engine"])
 
 async def log_live_audio(session_id: str, user_email: str, event: str):
-    """
-    Adana logs na live audio socket a MongoDB.
-    """
     chat_collection = get_chat_collection()
     if chat_collection is None:
         print("🚨 Live Audio DB Log Failure: Chat collection is not initialized.")
@@ -55,12 +52,10 @@ async def live_audio_socket(websocket: WebSocket):
     try:
         await websocket.send_text("Fata AI Live Stream Engine (Powered by Gemini) connected successfully.")
         
-        # Adana log din session a background
         asyncio.create_task(log_live_audio("live_session", "guest_user", "Live Gemini session started."))
         
         while True:
             data = await websocket.receive_bytes()
-            # Karbar bytes ba tare da dakatar da WebSocket ba
             asyncio.create_task(log_live_audio("live_session", "guest_user", f"Received {len(data)} bytes of streaming data."))
             
     except WebSocketDisconnect:

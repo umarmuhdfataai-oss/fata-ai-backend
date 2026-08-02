@@ -60,7 +60,6 @@ async def generate_creative_image(
                 detail="Prompt string cannot be empty.",
             )
 
-        # Random seed don kowane hoto ya zama na musamman
         random_seed = random.randint(1, 999999)
         encoded_prompt = urllib.parse.quote(req.prompt.strip())
         full_image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&seed={random_seed}&model=flux&nologo=true"

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import redis.asyncio as aioredis
 
 from core.database import close_mongo_connection, connect_to_mongo
-from routers import auth, chat, files, image, live
+from routers import auth, chat, files, image, live, history
 
 # Global Redis client
 redis_client = None
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Fata AI Ultra Core Engine",
     description="Next-Generation Enterprise AI Architecture Powered by Groq Engine.",
-    version="2.0.0",
+    version="3.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -78,7 +78,7 @@ async def root_health_check():
     return {
         "status": "online",
         "engine": "Fata AI Ultra Core (Groq Powered)",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "author": "Fakruddeen",
         "message": "Welcome to the central node of Fata AI.",
         "services": {
@@ -94,6 +94,7 @@ try:
     app.include_router(image.router, prefix="/api/v2")
     app.include_router(files.router, prefix="/api/v2")
     app.include_router(live.router, prefix="/api/v2")
+    app.include_router(history.router, prefix="/api/v2")
     print("✅ Routers loaded successfully.")
 except Exception as e:
     print(f"🚨 Router integration error: {str(e)}")

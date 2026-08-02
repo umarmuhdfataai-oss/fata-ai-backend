@@ -8,14 +8,10 @@ from core.security import get_current_user
 
 router = APIRouter(prefix="/files", tags=["File Processing Engine"])
 
-# Configure Groq Client
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 async def log_file_upload(session_id: str, user_email: str, file_info: dict):
-    """
-    Adana bayanin file upload a MongoDB.
-    """
     chat_collection = get_chat_collection()
     if chat_collection is None:
         print("🚨 File DB Log Failure: Chat collection is not initialized.")
@@ -66,7 +62,6 @@ async def upload_file_to_groq(
                 detail="GROQ_API_KEY variable is unconfigured."
             )
 
-        # Adana fayil a local temporary storage
         with open(temp_file_path, "wb") as f:
             f.write(await file.read())
 

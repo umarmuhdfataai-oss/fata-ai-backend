@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked.js for Markdown Formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             background-color: #131314;
@@ -21,7 +23,7 @@
         }
         .sidebar { 
             background-color: #1e1f20; 
-            transition: all 0.25s ease-in-out;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sidebar-item {
             display: flex;
@@ -33,7 +35,7 @@
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, color 0.2s;
         }
         .sidebar-item:hover, .sidebar-item.active {
             background-color: #282a2c;
@@ -43,11 +45,13 @@
             background-color: #1e1f20;
             border: 1px solid #3c4043;
             border-radius: 28px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.25s ease;
         }
         .custom-input-bar:focus-within {
             border-color: #f97316;
             background-color: #282a2c;
+            box-shadow: 0 4px 25px rgba(249, 115, 22, 0.15);
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -55,12 +59,34 @@
             background: #3c4043;
             border-radius: 10px;
         }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Markdown Styling Enhancements */
+        .ai-content pre {
+            background-color: #131314;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #3c4043;
+            margin: 8px 0;
+        }
+        .ai-content code {
+            font-family: monospace;
+            background-color: rgba(255,255,255,0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .ai-content p { margin-bottom: 8px; }
+        .ai-content ul { list-style-type: disc; padding-left: 20px; margin-bottom: 8px; }
+        .ai-content ol { list-style-type: decimal; padding-left: 20px; margin-bottom: 8px; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
 
     <!-- SIDEBAR -->
-    <aside id="mainSidebar" class="sidebar w-72 flex flex-col justify-between p-3 border-r border-[#282a2c] z-20 shrink-0 relative">
+    <aside id="mainSidebar" class="sidebar w-72 flex flex-col justify-between p-3 border-r border-[#282a2c] z-30 shrink-0 relative">
         <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
             <!-- Sidebar Header -->
             <div class="flex items-center justify-between px-2 pt-2">
@@ -69,24 +95,24 @@
                         <i class="fa-solid fa-bars text-lg"></i>
                     </button>
                     <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold shadow">
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
                             ⚡
                         </div>
-                        <span class="font-semibold text-base groq-gradient-text">Fata AI</span>
+                        <span class="font-semibold text-base groq-gradient-text tracking-wide">Fata AI</span>
                     </div>
                 </div>
             </div>
 
             <!-- New Chat Button -->
-            <button onclick="startNewSession()" class="flex items-center space-x-3 w-full px-4 py-3 rounded-full bg-[#131314] hover:bg-[#282a2c] text-gray-200 text-sm font-medium border border-[#3c4043] transition shadow-sm">
-                <i class="fa-regular fa-pen-to-square text-orange-400"></i>
+            <button onclick="startNewSession()" class="flex items-center space-x-3 w-full px-4 py-3 rounded-full bg-[#131314] hover:bg-[#282a2c] text-gray-200 text-sm font-medium border border-[#3c4043] transition shadow-sm group">
+                <i class="fa-regular fa-pen-to-square text-orange-400 group-hover:scale-110 transition-transform"></i>
                 <span>Sabuwar Tattaunawa</span>
             </button>
 
             <!-- Navigation Links -->
             <nav class="space-y-1">
                 <div onclick="switchMode('chat')" id="navChat" class="sidebar-item active">
-                    <i class="fa-regular fa-comment-dots text-base w-5 text-center"></i>
+                    <i class="fa-regular fa-comment-dots text-base w-5 text-center text-orange-400"></i>
                     <span>Chat (Groq LPU)</span>
                 </div>
                 <div onclick="openSearchModal()" id="navSearch" class="sidebar-item">
@@ -113,27 +139,30 @@
         <!-- Bottom User Profile Bar -->
         <div class="border-t border-[#282a2c] pt-3 flex items-center justify-between px-2">
             <div class="flex items-center space-x-3 truncate">
-                <div class="w-8 h-8 rounded-full bg-orange-700 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-600 to-amber-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow">
                     F
                 </div>
                 <div class="truncate">
                     <p class="text-xs font-semibold text-gray-200 truncate">Fakruddeen</p>
-                    <p class="text-[10px] text-green-400 font-medium" id="backendStatus">Connecting...</p>
+                    <p class="text-[10px] text-green-400 font-medium flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                        <span id="backendStatus">Connecting...</span>
+                    </p>
                 </div>
             </div>
-            <button onclick="alert('Settings Panel: System is aligned with Groq LPU Engine')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
+            <button onclick="alert('Fata AI Ultra Core v3.0 Powered by Groq LPU Engine & Gemini UI Architecture.')" class="p-2 rounded-full hover:bg-[#282a2c] text-gray-400 hover:text-white transition" title="Saituna">
                 <i class="fa-solid fa-gear text-sm"></i>
             </button>
         </div>
     </aside>
 
     <!-- MAIN WORKSPACE -->
-    <main class="flex-1 flex flex-col justify-between h-full relative bg-[#131314]">
+    <main class="flex-1 flex flex-col justify-between h-full relative bg-[#131314] overflow-hidden">
 
         <!-- TOP BAR -->
-        <header class="h-16 px-6 flex items-center justify-between border-b border-[#282a2c]/50">
+        <header class="h-16 px-6 flex items-center justify-between border-b border-[#282a2c]/50 bg-[#131314]/80 backdrop-blur-md z-10 shrink-0">
             <div class="flex items-center space-x-3">
-                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white">
+                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-[#282a2c] transition">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
                 <div class="flex items-center space-x-2">
@@ -142,44 +171,61 @@
                 </div>
             </div>
 
-            <!-- Upgrade Pill Button -->
-            <button onclick="alert('You are utilizing Enterprise-Grade Groq LPU Infrastructure!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs font-semibold transition">
-                <i class="fa-solid fa-bolt text-orange-400"></i>
+            <!-- Upgrade / Status Pill Button -->
+            <button onclick="alert('Kuna amfani da ingantaccen tsarin Groq LPU mai matuƙar sauri da ƙarfi!')" class="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs font-semibold transition shadow-sm">
+                <i class="fa-solid fa-bolt text-orange-400 animate-bounce"></i>
                 <span>Groq High-Speed Active</span>
             </button>
         </header>
 
         <!-- CONTENT DISPLAY AREA -->
-        <div id="mainContentArea" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-4xl w-full mx-auto flex flex-col justify-between">
+        <div id="mainContentArea" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-4xl w-full mx-auto flex flex-col justify-between scroll-smooth">
             
             <!-- Default Welcome Screen -->
-            <div id="welcomeScreen" class="my-auto text-center space-y-4">
-                <h1 class="text-3xl md:text-5xl font-semibold text-gray-300">
+            <div id="welcomeScreen" class="my-auto text-center space-y-4 px-4">
+                <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 mx-auto flex items-center justify-center text-3xl shadow-xl shadow-orange-500/10 mb-2">
+                    ⚡
+                </div>
+                <h1 class="text-3xl md:text-5xl font-semibold text-gray-200 tracking-tight">
                     Barka da zuwa, <span class="groq-gradient-text font-bold">Fakruddeen</span>
                 </h1>
-                <p class="text-gray-400 text-sm md:text-base max-w-md mx-auto">
-                    Ina zamu dosa a yau? Fata AI tana aiki ne da gudu mai zafi ta hanyar Groq LPU Engine don sauƙaƙe maka duk wani aiki.
+                <p class="text-gray-400 text-sm md:text-base max-w-md mx-auto leading-relaxed">
+                    Ina za mu dosa a yau? Fata AI tana aiki ne da gudu mai zafi ta hanyar Groq LPU Engine don sauƙaƙe maka duk wani aiki.
                 </p>
+                <div class="flex flex-wrap justify-center gap-2 pt-4">
+                    <button onclick="quickPrompt('Rubuta min wani gajeren shiri na fasahar zamani.')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">💻 Shirin Fasaha</button>
+                    <button onclick="quickPrompt('Mene ne fa\'idar Groq LPU a kan sauran AI engines?')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">🚀 Groq LPU Power</button>
+                    <button onclick="quickPrompt('Ka rubuta min waka ta yabon Hausa mai daɗi.')" class="px-4 py-2 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs text-gray-300 border border-[#3c4043] transition">📜 Waƙar Hausa</button>
+                </div>
             </div>
 
             <!-- Dynamic Chat Container -->
-            <div id="chatContainer" class="space-y-6 hidden w-full"></div>
+            <div id="chatContainer" class="space-y-6 hidden w-full pb-6"></div>
             
             <!-- Dynamic Image Container -->
             <div id="imageContainer" class="hidden w-full text-center space-y-6 my-auto">
-                <div id="imageResult" class="min-h-[300px] bg-[#1e1f20] border border-[#282a2c] rounded-2xl flex items-center justify-center overflow-hidden p-2">
-                    <span id="imgPlaceholder" class="text-gray-500 text-sm">Hotonka zai bayyana a nan...</span>
-                    <img id="generatedImg" class="hidden max-h-[450px] w-full object-contain rounded-2xl" alt="Generated Output">
+                <div class="max-w-xl mx-auto space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-200">Tsarin Ƙirƙirar Hoto (Image Generator)</h2>
+                    <p class="text-xs text-gray-400">Rubuta siffar hoto a cikin akwatin rubutu na ƙasa sannan ka danna aika don ganin ikon Fata AI.</p>
+                </div>
+                <div id="imageResult" class="min-h-[350px] bg-[#1e1f20] border border-[#3c4043] rounded-2xl flex items-center justify-center overflow-hidden p-4 shadow-2xl relative">
+                    <span id="imgPlaceholder" class="text-gray-500 text-sm flex items-center gap-2">
+                        <i class="fa-regular fa-image text-lg"></i> Hotonka zai bayyana a nan...
+                    </span>
+                    <img id="generatedImg" class="hidden max-h-[500px] w-full object-contain rounded-xl shadow-lg transition-all duration-300" alt="Generated Output">
                 </div>
             </div>
         </div>
 
         <!-- FLOATING INPUT BAR -->
-        <div class="p-4 w-full max-w-4xl mx-auto">
+        <div class="p-4 w-full max-w-4xl mx-auto shrink-0 bg-[#131314]">
             <!-- Attached File Preview Container -->
             <div id="attachmentPreview" class="hidden items-center justify-between bg-[#1e1f20] border border-[#3c4043] rounded-xl px-4 py-2 mb-2 text-xs text-gray-300">
-                <span id="attachmentName" class="truncate">filename.png</span>
-                <button onclick="removeAttachment()" class="text-red-400 hover:text-red-300 ml-2"><i class="fa-solid fa-xmark"></i></button>
+                <div class="flex items-center space-x-2 truncate">
+                    <i class="fa-solid fa-paperclip text-orange-400"></i>
+                    <span id="attachmentName" class="truncate font-medium">filename.png</span>
+                </div>
+                <button onclick="removeAttachment()" class="text-red-400 hover:text-red-300 ml-2 p-1"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <form id="inputForm" onsubmit="handleFormSubmit(event)" class="custom-input-bar p-2.5 flex items-center space-x-2">
@@ -191,21 +237,21 @@
                 </label>
 
                 <!-- Text Input -->
-                <input type="text" id="userInput" placeholder="Rubuta sakonki ko tambaya a nan..." autocomplete="off"
+                <input type="text" id="userInput" placeholder="Rubuta saƙonki ko tambaya a nan..." autocomplete="off"
                        class="flex-1 bg-transparent text-gray-200 text-sm focus:outline-none px-2 placeholder-gray-500">
 
                 <!-- Model Selector Dropdown -->
                 <div class="relative shrink-0">
-                    <button type="button" onclick="toggleModelDropdown()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#131314] border border-[#3c4043] text-xs font-medium text-gray-300 hover:bg-[#282a2c]">
+                    <button type="button" onclick="toggleModelDropdown()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#131314] border border-[#3c4043] text-xs font-medium text-gray-300 hover:bg-[#282a2c] transition">
                         <span id="selectedModelText">Llama 3.3</span>
                         <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
-                    <div id="modelDropdown" class="hidden absolute bottom-10 right-0 w-44 bg-[#1e1f20] border border-[#3c4043] rounded-xl shadow-xl z-30 py-1 text-xs">
-                        <div onclick="selectModel('Llama 3.3 70B', 'Llama 3.3')" class="px-3 py-2 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between">
+                    <div id="modelDropdown" class="hidden absolute bottom-12 right-0 w-48 bg-[#1e1f20] border border-[#3c4043] rounded-2xl shadow-2xl z-40 py-1.5 text-xs overflow-hidden">
+                        <div onclick="selectModel('Llama 3.3 70B', 'Llama 3.3')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
                             <span>Llama 3.3 70B</span>
                             <i class="fa-solid fa-bolt text-orange-400"></i>
                         </div>
-                        <div onclick="selectModel('Mixtral 8x7B', 'Mixtral')" class="px-3 py-2 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between">
+                        <div onclick="selectModel('Mixtral 8x7B', 'Mixtral')" class="px-4 py-2.5 hover:bg-[#282a2c] cursor-pointer text-gray-200 flex items-center justify-between transition">
                             <span>Mixtral 8x7B</span>
                             <i class="fa-solid fa-brain text-amber-400"></i>
                         </div>
@@ -218,7 +264,7 @@
                 </button>
 
                 <!-- Submit / Send Button -->
-                <button type="submit" class="p-2.5 rounded-full bg-orange-600 hover:bg-orange-500 text-white transition shrink-0 shadow-md">
+                <button type="submit" id="sendBtn" class="p-2.5 rounded-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white transition shrink-0 shadow-md">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </form>
@@ -230,14 +276,16 @@
     </main>
 
     <!-- SEARCH CHATS MODAL -->
-    <div id="searchModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-lg rounded-2xl p-4 space-y-4">
+    <div id="searchModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div class="bg-[#1e1f20] border border-[#3c4043] w-full max-w-lg rounded-3xl p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-[#282a2c] pb-3">
-                <h3 class="text-sm font-semibold text-gray-200">Bincika Tattaunawa</h3>
-                <button onclick="closeSearchModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-orange-400"></i> Bincika Tattaunawa
+                </h3>
+                <button onclick="closeSearchModal()" class="text-gray-400 hover:text-white p-1.5 rounded-full hover:bg-[#282a2c] transition"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <input type="text" id="searchInputModal" onkeyup="filterChatsHistory()" placeholder="Rubuta kalmar bincike..." class="w-full bg-[#131314] border border-[#3c4043] rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none">
-            <div id="searchResultsList" class="max-h-60 overflow-y-auto space-y-2"></div>
+            <input type="text" id="searchInputModal" onkeyup="filterChatsHistory()" placeholder="Rubuta kalmar bincike..." class="w-full bg-[#131314] border border-[#3c4043] rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-orange-500 transition">
+            <div id="searchResultsList" class="max-h-60 overflow-y-auto space-y-2 pr-1"></div>
         </div>
     </div>
 
@@ -312,6 +360,11 @@
             removeAttachment();
         }
 
+        function quickPrompt(text) {
+            document.getElementById("userInput").value = text;
+            handleFormSubmit(new Event('submit'));
+        }
+
         async function handleFormSubmit(e) {
             e.preventDefault();
             const input = document.getElementById("userInput");
@@ -338,24 +391,26 @@
 
             saveToHistory(currentSessionId, message);
 
+            // User Message Bubble
             const userBubble = document.createElement("div");
-            userBubble.className = "flex justify-end my-4";
-            userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed">${escapeHtml(message)}</div>`;
+            userBubble.className = "flex justify-end my-4 animate-fadeIn";
+            userBubble.innerHTML = `<div class="bg-[#282a2c] text-gray-200 px-5 py-3 rounded-2xl max-w-xl text-sm leading-relaxed shadow-sm">${escapeHtml(message)}</div>`;
             chatContainer.appendChild(userBubble);
 
+            // AI Response Bubble
             const aiBubble = document.createElement("div");
-            aiBubble.className = "flex items-start space-x-3 my-4";
+            aiBubble.className = "flex items-start space-x-3 my-4 animate-fadeIn";
             aiBubble.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-xs text-white font-bold shrink-0">⚡</div>
-                <div class="space-y-2 max-w-2xl w-full">
-                    <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ai-content">
-                        <span class="animate-pulse text-gray-400">Groq yana saurin rubuta amsa...</span>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-md">⚡</div>
+                <div class="space-y-2 max-w-3xl w-full">
+                    <div class="bg-[#1e1f20] border border-[#282a2c] text-gray-200 p-4 rounded-2xl text-sm leading-relaxed ai-content shadow-sm">
+                        <span class="animate-pulse text-gray-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Groq yana saurin rubuta amsa...</span>
                     </div>
                     <div class="flex items-center space-x-3 text-gray-400 text-xs pt-1 px-1">
-                        <button onclick="copyToClipboard(this)" class="hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
-                        <button onclick="handleSendChat('${escapeHtml(message)}')" class="hover:text-white transition" title="Sake Amsawa"><i class="fa-solid fa-rotate-right"></i></button>
-                        <button onclick="this.classList.toggle('text-green-400')" class="hover:text-white transition"><i class="fa-regular fa-thumbs-up"></i></button>
-                        <button onclick="this.classList.toggle('text-red-400')" class="hover:text-white transition"><i class="fa-regular fa-thumbs-down"></i></button>
+                        <button onclick="copyToClipboard(this)" class="hover:text-white transition" title="Kwafi"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="handleSendChat('${escapeHtml(message).replace(/'/g, "\\'")}')" class="hover:text-white transition" title="Sake Amsawa"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button onclick="this.classList.toggle('text-green-400')" class="hover:text-white transition" title="Yayi"><i class="fa-regular fa-thumbs-up"></i></button>
+                        <button onclick="this.classList.toggle('text-red-400')" class="hover:text-white transition" title="Bai yi ba"><i class="fa-regular fa-thumbs-down"></i></button>
                     </div>
                 </div>
             `;
@@ -379,6 +434,7 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
                 aiContent.innerHTML = "";
+                let accumulatedText = "";
                 let buffer = "";
 
                 while (true) {
@@ -398,11 +454,13 @@
                             try {
                                 const parsed = JSON.parse(raw);
                                 if (parsed.content) {
-                                    aiContent.textContent += parsed.content;
+                                    accumulatedText += parsed.content;
+                                    aiContent.innerHTML = marked.parse(accumulatedText);
                                     chatContainer.scrollTop = chatContainer.scrollHeight;
                                 }
                             } catch (e) {
-                                aiContent.textContent += raw.replace(/\\n/g, "\n");
+                                accumulatedText += raw.replace(/\\n/g, "\n");
+                                aiContent.innerHTML = marked.parse(accumulatedText);
                                 chatContainer.scrollTop = chatContainer.scrollHeight;
                             }
                         }
@@ -417,13 +475,13 @@
             const placeholder = document.getElementById("imgPlaceholder");
             const imgElement = document.getElementById("generatedImg");
 
-            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-orange-400 text-xl mr-2"></i> Yana ƙirƙirar hoto...`;
+            placeholder.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-orange-400 text-xl mr-2"></i> Yana ƙirƙirar hoto ta amfani da AI...`;
             placeholder.classList.remove("hidden");
             imgElement.classList.add("hidden");
 
             try {
                 const encodedPrompt = encodeURIComponent(prompt);
-                imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=800&height=600&nologo=true`;
+                imgElement.src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true`;
                 imgElement.onload = () => {
                     placeholder.classList.add("hidden");
                     imgElement.classList.remove("hidden");
@@ -518,7 +576,7 @@
                 div.className = "sidebar-item text-xs justify-between group";
                 div.innerHTML = `
                     <span onclick="loadChatSession('${item.id}')" class="truncate flex-1">${escapeHtml(item.title)}</span>
-                    <button onclick="deleteHistoryItem('${item.id}')" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="deleteHistoryItem('${item.id}')" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-1 transition"><i class="fa-solid fa-trash"></i></button>
                 `;
                 listContainer.appendChild(div);
             });
@@ -559,7 +617,7 @@
 
             filtered.forEach(item => {
                 const div = document.createElement("div");
-                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-300";
+                div.className = "p-3 bg-[#131314] hover:bg-[#282a2c] rounded-xl cursor-pointer text-xs text-gray-300 transition";
                 div.onclick = () => { loadChatSession(item.id); closeSearchModal(); };
                 div.innerText = item.title;
                 resultsList.appendChild(div);
