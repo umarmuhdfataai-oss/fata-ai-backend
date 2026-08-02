@@ -6,9 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 
 from google import genai
-from google.genai import types
 
-# Correct Imports
 from core.database import get_chat_collection
 from core.security import get_current_user
 
@@ -37,13 +35,8 @@ async def stream_chat(
       
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
-        "KAI WANE NE: Kai ne 'Fata AI' mai amfani da babbar manhajar Google Gemini Ultra Core. "
-        "Kuna da babban tunani, zurfin fahimta, damar riƙe dogon tarihi (Long-context memory), da karanta hotuna/fayiloli.\n\n"
-        "TSARIN AMSA SAKO (INSTRUCTIONS):\n"
-        "1. Yi amfani da dukkan bayanan da ke cikin tarihin tattaunawarku da mai amfani don ba da amsa mai kyau.\n"
-        "2. Idan mai amfani ya tura hoto ko fayil, bincika hoton da kyau sannan ka ba da bayani a kansa.\n"
-        "3. Idan an yi tambaya game da abubuwan da ke faruwa a duniyar yanzu, yi amfani da kayan bincike don gano ainihin abin da ke faruwa.\n"
-        "4. Amsa cikin harshen Hausa mai daɗi, inganci, fahimta, da girmamawa."
+        "KAI WANE NE: Kai ne 'Fata AI' mai amfani da babbar manhajar Google Gemini Ultra Core.\n"
+        "Amsa cikin harshen Hausa mai daɗi, inganci, fahimta, da girmamawa."
     )
 
     async def event_generator():
@@ -53,59 +46,36 @@ async def stream_chat(
             if model and "pro" in model.lower():
                 target_model = "gemini-3.6-pro"
 
-            chat_collection = get_chat_collection()
-            history_contents = []
-            
-            # 1. Dauko dukkan tarihin tattaunawa daga MongoDB
-            if chat_collection is not None:
-                session_data = await chat_collection.find_one({"_id": session_id})
-                if session_data and "messages" in session_data:
-                    for msg in session_data["messages"]:
-                        role = "user" if msg["role"] == "user" else "model"
-                        history_contents.append(
-                            types.Content(
-                                role=role,
-                                parts=[types.Part.from_text(text=msg["content"])]
-                            )
-                        )
+            # Shigar da saƙo ta hanyar Interactions API ta sabon SDK
+            full_input = f"{system_prompt}\n\nMai Amfani: {user_query}"
 
-            # 2. Sarrafa Hoto/Fayil idan an tura
-            current_user_parts = []
-            if file:
-                file_bytes = await file.read()
-                mime_type = file.content_type
-                current_user_parts.append(
-                    types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
-                )
-            
-            if user_query:
-                current_user_parts.append(types.Part.from_text(text=user_query))
-
-            history_contents.append(types.Content(role="user", parts=current_user_parts))
-
-            # 3. Kayan Bincike na Google Search (Correct Syntax)
-            tools_list = [{"google_search": {}}, {"code_execution": {}}]
-
-            # 4. Aika saƙo ta hanyar Async Stream
-            response = await client.aio.models.generate_content_stream(
+            # Stream response ta hanyar Interactions API
+            stream = client.interactions.create(
                 model=target_model,
-                contents=history_contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.4,
-                    tools=tools_list
-                )
+                input=full_input,
+                stream=True
             )
 
-            async for chunk in response:
-                if chunk.text:
-                    full_assistant_response += chunk.text
-                    payload = json.dumps({"content": chunk.text})
-                    yield f"data: {payload}\n\n"
+            for event in stream:
+                # Ciro rubutu daga gudanarwar 'step.delta' ko amsa
+                if hasattr(event, "delta") and event.delta:
+                    if isinstance(event.delta, dict) and "text" in event.delta:
+                        text_chunk = event.delta["text"]
+                        full_assistant_response += text_chunk
+                        yield f"data: {json.dumps({'content': text_chunk})}\n\n"
+                    elif hasattr(event.delta, "text") and event.delta.text:
+                        text_chunk = event.delta.text
+                        full_assistant_response += text_chunk
+                        yield f"data: {json.dumps({'content': text_chunk})}\n\n"
+                elif hasattr(event, "output_text") and event.output_text:
+                    text_chunk = event.output_text
+                    full_assistant_response += text_chunk
+                    yield f"data: {json.dumps({'content': text_chunk})}\n\n"
 
             yield "data: [DONE]\n\n"
 
-            # 5. Adana a MongoDB
+            # Adana tattaunawar a MongoDB
+            chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Hoto/Fayil]"}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
