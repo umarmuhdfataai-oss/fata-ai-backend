@@ -77,8 +77,6 @@ async def stream_chat(
             )
 
             # 3. Tura tarihi da sabon saƙo zuwa ga Gemini ta hanyar streaming
-            # Lura: A sabon tsarin Gemini 3.6, ana iya amfani da 'thinking_level' maimakon 'temperature' idan ana son zurfin tunani (Reasoning),
-            # amma an bar config a buɗe ko kuma an daidaita shi yadda zai yi aiki lami lafiya.
             response = await asyncio.to_thread(
                 client.models.generate_content_stream,
                 model=target_model,
