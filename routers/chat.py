@@ -30,18 +30,26 @@ async def fetch_tavily_search(query: str) -> str:
     payload = {
         "api_key": TAVILY_API_KEY,
         "query": query,
-        "search_depth": "advanced",
-        "max_results": 3
+        "search_depth": "advanced", # Advanced search don samun cikakken bayani
+        "max_results": 3,
+        "include_domains": ["uefa.com", "espn.com", "bbc.com", "goal.com"] # Takaita shafukan da za'a duba
     }
     
     try:
-        async with httpx.AsyncClient(timeout=8.0) as httpx_client:
+        async with httpx.AsyncClient(timeout=10.0) as httpx_client:
             response = await httpx_client.post(url, json=payload)
             if response.status_code == 200:
                 data = response.json()
+                # Tara abubuwan da aka samo
                 results = data.get("results", [])
-                snippets = [res.get("content", "") for res in results if res.get("content")]
+                snippets = []
+                for res in results:
+                    if res.get("content"):
+                        # Tabbatar da kwanan wata (idan akwai)
+                        snippets.append(f"[{res.get('date', 'N/A')}]: {res.get('content')}")
+                
                 if snippets:
+                    print(f"🔍 Tavily Grounding Success for: '{query}'")
                     return "\n".join(snippets)
     except Exception as e:
         print(f"⚠️ Tavily Search Error: {str(e)}")
@@ -63,23 +71,27 @@ async def stream_chat(
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    # Binciko intanet
-    web_search_context = await fetch_tavily_search(user_query)
+    # 1. Binciko Intanet domin Grounding
+    web_search_context = await fetch_tavily_search(f"Final result of {user_query} in 2026 season")
 
     chat_collection = get_chat_collection()
     
-    # Tsarin umarni mai karfi wanda yake tilasta wa AI bada amsa mai tsari irin na Gemini
+    # 2. Tsara System Instruction mai karfi (Strict Grounding Rule)
     system_instruction = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike mai amfani da Groq LPU Engine. "
-        "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai zazzagewa, inganci, da cikakken bayani kamar yadda Gemini yake yi. "
+        "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
         "Yanzu muna cikin shekara ta 2026. "
-        "Dole ne ka tsara amsoshinka ta hanyar amfani da shugabanci mai kyau (Headings), lambobi (Numbered lists), da kuma manyan haruffa (Bolding) domin su fito sosai su bada ma'ana."
+        "MUHIMMI: Wajen bada amsa akan batutuwan da suka shafi tarihi ko wasanni (kamar Champions League), "
+        "dole ne ka yi amfani da KAWAI bayanan intanet (Web Search Results) da aka ba ka a ƙasa. "
+        "Kada ka yi hasashe. Idan bayanan intanet sun ce PSG ta lashe kofin 2026 ta hanyar bugun penariti bayan sun tashi 1-1, "
+        "to haka za ka fada. Ka tabbatar ka tsara amsarka da kyau (headings, bolding, lists)."
     )
 
     if web_search_context:
-        system_instruction += f"\n\n[Ga bayanan da aka samo daga intanet don taimaka maka wajen bada ingantacciyar amsa]:\n{web_search_context}"
+        system_instruction += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet (Grounding Data - DAGA MAJALINAN WASANNI)]: \n{web_search_context}"
+        system_instruction += "\n\n(Yi amfani da wadannan bayanan kawai wajen bada amsa ta karshe)."
     else:
-        system_instruction += "\n\n[Idan ba ka da cikakken bayani akan takamaiman mutum ko abu na gida, yi amfani da iliminka na asali mai fadi domin gabatar da amsa mai ma'ana da girmamawa]."
+        system_instruction += "\n\n[Babu cikakken sabon bayanin intanet da aka samo. Ka yi amfani da iliminka na asali wanda aka gitta zuwa 2026]."
 
     messages = [{"role": "system", "content": system_instruction}]
     
@@ -95,11 +107,13 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
+            # Amfani da llama-3.3-70b-versatile
             response_stream = await asyncio.to_thread(
                 client.chat.completions.create,
                 model="llama-3.3-70b-versatile",
                 messages=messages,
-                stream=True
+                stream=True,
+                temperature=0.2 # Rage temperature don kara gaskiya (factual accuracy)
             )
 
             for chunk in response_stream:
@@ -124,7 +138,7 @@ async def stream_chat(
                     upsert=True
                 )
         except Exception as e:
-            err_payload = json.dumps({"content": f"⚠️ Kuskure: {str(e)}"})
+            err_payload = json.dumps({"content": f"⚠️ Kuskure daga Groq Engine: {str(e)}"})
             yield f"data: {err_payload}\n\n"
             yield "data: [DONE]\n\n"
 
