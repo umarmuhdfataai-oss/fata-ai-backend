@@ -109,10 +109,10 @@ async def stream_chat(
                 temperature=0.3,
             )
 
-            # Amfani da tabbataccen samfurin gemini-1.5-flash wanda ke aiki da sabon google-genai SDK
+            # Anan ne muke amfani da ainihin sabon sunan samfurin da SDK ke nema kai tsaye
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=contents_history,
                 config=config
             )
