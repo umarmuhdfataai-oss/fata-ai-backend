@@ -83,7 +83,7 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # An sabunta zuwa samfuran Gemini 3.6
+            # An sabunta zuwa samfuran Gemini
             target_model = "gemini-3.6-flash"
             if req.model and "pro" in req.model.lower():
                 target_model = "gemini-3.6-pro"
