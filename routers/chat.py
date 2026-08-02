@@ -109,7 +109,7 @@ async def stream_chat(
                 temperature=0.3,
             )
 
-            # Anan mun yi amfani da gemini-2.5-flash ko gemini-2.5-pro wanda yake da tsayayyen aiki a yanzu
+            # Anan mun dawo da model zuwa "gemini-2.5-flash" wanda shine ingantaccen suna a sabon SDK ɗin
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
                 model="gemini-2.5-flash",
