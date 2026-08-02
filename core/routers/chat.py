@@ -33,13 +33,13 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
       
-    # Umarni mai tsauri don ba da amsa kai tsaye kawai
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
-        "DOKOKIN AMSA:\n"
-        "1. Ka amsa tambayar da aka yi maka KAI TSAYE ba tare da ɓata lokaci ba.\n"
-        "2. KAR KUMA ka cewa 'Ni ne Fata AI...' ko 'Barka da warhaka...' ko sake gabatar da kanka a duk lokacin da aka yi maka tambaya.\n"
-        "3. Amfani da harshen Hausa ingantacce, madaidaici, kuma mai bayyana gaskiyar al'amari."
+        "UMARNI MAI MUHIMMANCI:\n"
+        "1. Ka amsa tambayar da aka yi maka KAI TSAYE.\n"
+        "2. KAR KA MAIMAITA gaisuwa ko cewa 'Ni ne Fata AI...' ko gabatar da kanka lokacin amsa tambaya.\n"
+        "3. Yi amfani da kayan bincike (Google Search) don nemo ingantattun sabbin bayanai idan tambayar tana buƙatar hakan.\n"
+        "4. Amsa cikin harshen Hausa ingantacce."
     )
 
     async def event_generator():
@@ -51,17 +51,17 @@ async def stream_chat(
 
             full_input = f"[SYSTEM INSTRUCTION: {system_prompt}]\n\n[USER QUERY]: {user_query}"
 
-            # Stream amsar ta Interactions API
+            # Kunna Google Search Grounding a cikinta
             stream = client.interactions.create(
                 model=target_model,
                 input=full_input,
+                tools=[{"google_search": {}}],  # Wannan zai ba shi damar binciko Intanet
                 stream=True
             )
 
             for event in stream:
                 text_chunk = None
                 
-                # Ciro rubutu daga gudanarwar 'step.delta' ko amsa
                 if hasattr(event, "delta") and event.delta:
                     if isinstance(event.delta, dict) and "text" in event.delta:
                         text_chunk = event.delta["text"]
