@@ -109,10 +109,10 @@ async def stream_chat(
                 temperature=0.3,
             )
 
-            # Anan ne muke amfani da ainihin sabon sunan samfurin da SDK ke nema kai tsaye
+            # Anan mun gyara sunan samfurin zuwa gemini-3.6-flash daidai da sabon SDK
             response_stream = await asyncio.to_thread(
                 client.models.generate_content_stream,
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=contents_history,
                 config=config
             )
