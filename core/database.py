@@ -12,12 +12,10 @@ redis_client = None
 
 async def connect_to_mongo():
     global mongo_client, db, chat_collection, redis_client
-    # Connect to Distributed MongoDB Cluster
     mongo_client = AsyncIOMotorClient(MONGO_URI)
     db = mongo_client.get_database("fata_ai_v2_db")
     chat_collection = db.get_collection("conversations")
     
-    # Connect to High-speed Redis Memory Cache
     try:
         redis_client = aioredis.from_url(REDIS_URI, decode_responses=True)
     except Exception as e:

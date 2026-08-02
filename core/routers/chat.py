@@ -1,14 +1,14 @@
 import asyncio
 import json
 import os
-import base64
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
 from google import genai
 from google.genai import types
+
+# Correct Imports
 from core.database import get_chat_collection
 from core.security import get_current_user
 
@@ -19,7 +19,7 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 @router.post("/stream")
 async def stream_chat(
-    message: str = Form(...),
+    message: str = Form(""),
     session_id: Optional[str] = Form(None),
     model: Optional[str] = Form("gemini-3.6-flash"),
     file: Optional[UploadFile] = File(None),
@@ -57,7 +57,7 @@ async def stream_chat(
             chat_collection = get_chat_collection()
             history_contents = []
             
-            # 1. Dauko tarihin tattaunawa daga MongoDB
+            # 1. Dauko dukkan tarihin tattaunawa daga MongoDB
             if chat_collection is not None:
                 session_data = await chat_collection.find_one({"_id": session_id})
                 if session_data and "messages" in session_data:
@@ -70,7 +70,7 @@ async def stream_chat(
                             )
                         )
 
-            # 2. Sarrafa Hoto idan an tura (Vision capability)
+            # 2. Sarrafa Hoto/Fayil idan an tura
             current_user_parts = []
             if file:
                 file_bytes = await file.read()

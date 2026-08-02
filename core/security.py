@@ -5,7 +5,6 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-# Cryptographic engine variables
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "FATA_AI_ULTRA_SECURE_NODE_98231")
 ALGORITHM = "HS256"
 CryptContextRef = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -34,12 +33,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     if not token:
-        raise credentials_exception
+        # Idan ba a aiko da token ba, muna ba shi matsayin guest
+        return {"sub": "guest_user"}
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
+            return {"sub": "guest_user"}
         return payload
     except JWTError:
-        raise credentials_exception
+        return {"sub": "guest_user"}
