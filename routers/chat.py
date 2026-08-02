@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
@@ -16,8 +17,8 @@ router = APIRouter(prefix="/chat", tags=["AI Chat Engine (Gemini)"])
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+# Fara ainihin Google GenAI Client
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 class ChatRequest(BaseModel):
     message: str
@@ -60,7 +61,7 @@ async def stream_chat(
     if not req.message or not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
-    if not GEMINI_API_KEY:
+    if not client:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
 
     user_email = current_user.get("sub", "guest_user")
@@ -80,29 +81,40 @@ async def stream_chat(
     if web_search_context:
         system_instruction += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
 
-    # Gina tarihin tattaunawa don google-generativeai
-    history = []
+    contents_history = []
     if chat_collection is not None:
         existing_chat = await chat_collection.find_one({"_id": session_id})
         if existing_chat and "messages" in existing_chat:
             for msg in existing_chat["messages"][-6:]:
                 role = "user" if msg["role"] == "user" else "model"
-                history.append({"role": role, "parts": [msg["content"]]})
+                contents_history.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    )
+                )
+
+    contents_history.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=user_query)]
+        )
+    )
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da tabbataccen samfurin 3.5 Flash-Lite ko flash wanda ke aiki da tsohon SDK
-            generation_model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                system_instruction=system_instruction
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.3,
             )
 
-            chat = generation_model.start_chat(history=history)
+            # Amfani da tabbataccen samfurin gemini-1.5-flash wanda ke aiki da sabon google-genai SDK
             response_stream = await asyncio.to_thread(
-                chat.send_message,
-                user_query,
-                stream=True
+                client.models.generate_content_stream,
+                model="gemini-1.5-flash",
+                contents=contents_history,
+                config=config
             )
 
             for chunk in response_stream:
