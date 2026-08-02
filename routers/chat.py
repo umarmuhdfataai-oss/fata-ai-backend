@@ -30,8 +30,8 @@ async def fetch_tavily_search(query: str) -> str:
     payload = {
         "api_key": TAVILY_API_KEY,
         "query": query,
-        "search_depth": "basic",
-        "max_results": 2
+        "search_depth": "advanced",
+        "max_results": 3
     }
     
     try:
@@ -63,23 +63,23 @@ async def stream_chat(
     session_id = req.session_id if req.session_id else "default_session"
     user_query = req.message.strip()
 
-    # Binciko intanet idan akwai bukata
+    # Binciko intanet
     web_search_context = await fetch_tavily_search(user_query)
 
     chat_collection = get_chat_collection()
     
-    # Tsayayyen umarni da ke hana AI rudewa
+    # Tsarin umarni mai karfi wanda yake tilasta wa AI bada amsa mai tsari irin na Gemini
     system_instruction = (
-        "Sunanka Fata AI, babban mataimakin fasaha mai amfani da Groq LPU Engine. "
-        "Amsa duk tambayoyi cikin harshen Hausa mai dadi, sauri, da cikakken bayani kamar Gemini. "
+        "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike mai amfani da Groq LPU Engine. "
+        "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai zazzagewa, inganci, da cikakken bayani kamar yadda Gemini yake yi. "
         "Yanzu muna cikin shekara ta 2026. "
-        "Kayi kiyaye matuka wajen fitar da bayanan wasanni ko tarihi: kar ka karbi duk wani labarin karya ko jita-jita daga intanet. "
-        "Ga ingantaccen tarihin gasar UEFA Champions League ta kakar 2025/2026 da aka buga a Budapest: "
-        "Paris Saint-Germain (PSG) ce ta lashe kofin bayan sun doke Arsenal a bugun penariti (4-3) bayan sun tashi 1-1 a lokacin wasa da karin lokaci."
+        "Dole ne ka tsara amsoshinka ta hanyar amfani da shugabanci mai kyau (Headings), lambobi (Numbered lists), da kuma manyan haruffa (Bolding) domin su fito sosai su bada ma'ana."
     )
 
     if web_search_context:
-        system_instruction += f"\n\n[Bayanan Intanet]:\n{web_search_context}"
+        system_instruction += f"\n\n[Ga bayanan da aka samo daga intanet don taimaka maka wajen bada ingantacciyar amsa]:\n{web_search_context}"
+    else:
+        system_instruction += "\n\n[Idan ba ka da cikakken bayani akan takamaiman mutum ko abu na gida, yi amfani da iliminka na asali mai fadi domin gabatar da amsa mai ma'ana da girmamawa]."
 
     messages = [{"role": "system", "content": system_instruction}]
     
