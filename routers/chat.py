@@ -1,7 +1,6 @@
 import json
 import asyncio
 import os
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -22,36 +21,6 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
-
-async def fetch_web_search(query: str) -> str:
-    """
-    Ingantaccen binciken intanet ta amfani da DuckDuckGo HTML Search domin samun sabbin bayanai.
-    """
-    url = "https://html.duckduckgo.com/html/"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as httpx_client:
-            response = await httpx_client.post(url, data={"q": query}, headers=headers)
-            if response.status_code == 200:
-                from bs4 import BeautifulSoup
-                soup = BeautifulSoup(response.text, "html.parser")
-                results = []
-                for result in soup.find_all("div", class_="result", limit=4):
-                    snippet_elem = result.find("a", class_="result__snippet")
-                    if snippet_elem:
-                        text = snippet_elem.get_text(strip=True)
-                        results.append(text)
-                
-                if results:
-                    combined = " \n".join(results)
-                    print(f"🔍 Web Search Success for '{query}': Found {len(results)} results.")
-                    return combined
-    except Exception as e:
-        print(f"⚠️ Web search error: {str(e)}")
-    
-    return ""
 
 @router.post("/stream")
 async def stream_chat(
@@ -75,20 +44,15 @@ async def stream_chat(
 
     user_query = req.message.strip()
 
-    # Binciko yanar gizo kafin amsawa
-    search_context = await fetch_web_search(user_query)
-
     # MongoDB Chat History Retrieve
     chat_collection = get_chat_collection()
     
+    # Cikakken bayani mai karfi domin bai wa Llama 3.3 damar bada cikakkun bayanai na yanzu (2026)
     system_instruction = (
-        "Kai ne Fata AI, babban mataimakin fasaha mai amfani da Groq LPU Engine. "
-        "Amsa tambayoyi cikin harshen Hausa mai kyau da fahimta. "
-        "Ga shi nan an binciko bayanan intanet na yanzu (Web Search Context) domin su taimaka maka wajen bada ingantacciyar amsa mai daidai da halin da ake ciki a yau:"
+        "Sunanka Fata AI, babban mataimakin fasaha wanda aka kirkira domin taimakon masu amfani da shi a duniya. "
+        "Amsa duk tambayoyi cikin harshen Hausa ko Turanci gwargwadon yadda aka tambaye ka, cikin hikima, sauri, da inganci sosai kamar Gemini. "
+        "Yanzu muna cikin shekara ta 2026. Ka kasance mai amfani da iliminka mai zurfi wajen bada ingantattun amsoshi masu daidai da gaskiyar lokaci."
     )
-
-    if search_context:
-        system_instruction += f"\n\n[Web Search Results / Sabbin Bayanai]: {search_context}"
 
     messages = [
         {
@@ -110,7 +74,7 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Amfani da llama-3.3-70b-versatile
+            # Amfani da llama-3.3-70b-versatile don samun ingantattun amsoshi masu ƙarfi
             response_stream = await asyncio.to_thread(
                 client.chat.completions.create,
                 model="llama-3.3-70b-versatile",
