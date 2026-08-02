@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from typing import Optional
 
 from google import genai
-from google.genai import types
 from core.security import get_current_user
 from core.database import get_chat_collection
 
@@ -71,7 +70,7 @@ async def stream_chat(
     web_search_context = await fetch_tavily_search(f"Final result of {user_query} in 2026 season")
     chat_collection = get_chat_collection()
      
-    system_instruction = (
+    system_prompt = (
         "Sunanka Fata AI, babban mataimakin fasaha kuma ƙwararren mai bincike da aka gina a kan Google Gemini. "
         "Amsa duk tambayoyin masu amfani cikin harshen Hausa mai daɗi, inganci, da cikakken bayani kamar Gemini. "
         "Yanzu muna cikin shekara ta 2026. "
@@ -79,51 +78,28 @@ async def stream_chat(
     )
 
     if web_search_context:
-        system_instruction += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
+        system_prompt += f"\n\n[Ingantattun Sabbin Bayanai daga Intanet]: \n{web_search_context}"
 
-    contents_history = []
-    if chat_collection is not None:
-        existing_chat = await chat_collection.find_one({"_id": session_id})
-        if existing_chat and "messages" in existing_chat:
-            for msg in existing_chat["messages"][-6:]:
-                role = "user" if msg["role"] == "user" else "model"
-                contents_history.append(
-                    types.Content(
-                        role=role,
-                        parts=[types.Part.from_text(text=msg["content"])]
-                    )
-                )
-
-    contents_history.append(
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text=user_query)]
-        )
-    )
+    full_input_text = f"{system_prompt}\n\nUser Query: {user_query}"
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.3,
+            interaction = await asyncio.to_thread(
+                client.interactions.create,
+                model="gemini-3.6-flash",
+                input=full_input_text
             )
 
-            # Anan mun dawo da model zuwa "gemini-2.5-flash" wanda shine ingantaccen suna a sabon SDK ɗin
-            response_stream = await asyncio.to_thread(
-                client.models.generate_content_stream,
-                model="gemini-2.5-flash",
-                contents=contents_history,
-                config=config
-            )
+            response_text = interaction.output_text if interaction and interaction.output_text else "Babu amsa."
+            full_assistant_response = response_text
 
-            for chunk in response_stream:
-                if chunk.text:
-                    text_chunk = chunk.text
-                    full_assistant_response += text_chunk
-                    payload = json.dumps({"content": text_chunk})
-                    yield f"data: {payload}\n\n"
-                    await asyncio.sleep(0.01)
+            chunk_size = 20
+            for i in range(0, len(response_text), chunk_size):
+                text_chunk = response_text[i:i + chunk_size]
+                payload = json.dumps({"content": text_chunk})
+                yield f"data: {payload}\n\n"
+                await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 

@@ -14,7 +14,7 @@ redis_client = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global redis_client
-    print("⚡ Starting Fata AI Ultra Core Engine (Powered by Groq)...")
+    print("⚡ Starting Fata AI Ultra Core Engine (Powered by Gemini)...")
 
     # 1. MongoDB Connection
     try:
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI app
 app = FastAPI(
     title="Fata AI Ultra Core Engine",
-    description="Next-Generation Enterprise AI Architecture Powered by Groq Engine.",
+    description="Next-Generation Enterprise AI Architecture Powered by Gemini Engine.",
     version="3.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -72,17 +72,17 @@ app.add_middleware(
 # Health Check Endpoint
 @app.get("/", tags=["System Health"])
 async def root_health_check():
-    groq_configured = bool(os.getenv("GROQ_API_KEY"))
+    gemini_configured = bool(os.getenv("GEMINI_API_KEY"))
     redis_status = "connected" if redis_client else "disconnected"
 
     return {
         "status": "online",
-        "engine": "Fata AI Ultra Core (Groq Powered)",
+        "engine": "Fata AI Ultra Core (Gemini Powered)",
         "version": "3.0.0",
         "author": "Fakruddeen",
         "message": "Welcome to the central node of Fata AI.",
         "services": {
-            "groq_api": "active" if groq_configured else "missing",
+            "gemini_api": "active" if gemini_configured else "missing",
             "redis_cache": redis_status,
         },
     }
