@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 
 from google import genai
+from google.genai import types
 
 from core.database import get_chat_collection
 from core.security import get_current_user
@@ -32,61 +33,60 @@ async def stream_chat(
     user_email = current_user.get("sub", "guest_user")
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
-      
+    
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
         "UMARNI MAI MUHIMMANCI:\n"
         "1. Ka amsa tambayar da aka yi maka KAI TSAYE.\n"
         "2. KAR KA MAIMAITA gaisuwa ko cewa 'Ni ne Fata AI...' ko gabatar da kanka lokacin amsa tambaya.\n"
-        "3. Yi amfani da Google Search wajen neman sabbin bayanai na shekarar 2026.\n"
-        "4. Amsa cikin harshen Hausa mai inganci."
+        "3. Amsa cikin harshen Hausa mai inganci."
     )
 
     async def event_generator():
         full_assistant_response = ""
         try:
-            target_model = "gemini-3.6-flash"
+            # Zaɓin model bisa abin da mai amfani ya turo
+            target_model = "gemini-2.5-flash"
             if model and "pro" in model.lower():
-                target_model = "gemini-3.6-pro"
+                target_model = "gemini-2.5-pro"
 
-            # Amfani da run_in_executor don kiran asalin aikin (blocking) kuma ka tattara iterator din
-            loop = asyncio.get_event_loop()
-            
-            def get_stream():
-                return client.interactions.create(
+            # Tattara kaya (Text / File)
+            contents = []
+            if file:
+                file_bytes = await file.read()
+                mime_type = file.content_type or "image/jpeg"
+                contents.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
+
+            if user_query:
+                contents.append(user_query)
+
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.7
+            )
+
+            # Kiran Gemini API ta hanyar da ta dace da SDK
+            def generate():
+                return client.models.generate_content_stream(
                     model=target_model,
-                    input=user_query,
-                    system_instruction=system_prompt,
-                    tools=[{"type": "google_search"}],
-                    stream=True
+                    contents=contents,
+                    config=config
                 )
-                
-            stream = await loop.run_in_executor(None, get_stream)
 
-            # Iterating ta hanyar to_thread don gudun toshe loop
-            for event in stream:
-                text_chunk = None
-                
-                if hasattr(event, "delta") and event.delta:
-                    if isinstance(event.delta, dict) and "text" in event.delta:
-                        text_chunk = event.delta["text"]
-                    elif hasattr(event.delta, "text") and event.delta.text:
-                        text_chunk = event.delta.text
-                elif hasattr(event, "output_text") and event.output_text:
-                    text_chunk = event.output_text
+            response_stream = await asyncio.to_thread(generate)
 
-                if text_chunk:
-                    full_assistant_response += text_chunk
-                    yield f"data: {json.dumps({'content': text_chunk})}\n\n"
-                    # Muhimmanci: bada lokaci don tura sakon
-                    await asyncio.sleep(0)
+            for chunk in response_stream:
+                if chunk.text:
+                    full_assistant_response += chunk.text
+                    yield f"data: {json.dumps({'content': chunk.text})}\n\n"
+                    await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 
-            # Adana bayanai (Fire and Forget)
+            # Adana bayani a MongoDB
             chat_collection = get_chat_collection()
             if chat_collection is not None:
-                new_user_msg = {"role": "user", "content": user_query or "[Hoto/Fayil]"}
+                new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
                 asyncio.create_task(
                     chat_collection.update_one(
@@ -98,6 +98,7 @@ async def stream_chat(
                         upsert=True
                     )
                 )
+
         except Exception as e:
             err_payload = json.dumps({"content": f"⚠️ Kuskure: {str(e)}"})
             yield f"data: {err_payload}\n\n"
