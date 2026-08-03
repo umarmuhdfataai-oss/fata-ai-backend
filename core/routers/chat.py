@@ -45,10 +45,8 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Map input model zuwa ainihin valid API model name din Google
-            target_model = "gemini-1.5-flash"
-            if model and "pro" in model.lower():
-                target_model = "gemini-1.5-pro"
+            # Amfani da ainihin model ɗin da aka turo (gemini-3.6-flash)
+            target_model = model.strip() if model else "gemini-3.6-flash"
 
             contents = []
             if file:
