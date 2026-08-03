@@ -34,12 +34,11 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
     
-    # 1. Haɓaka Basira da Tsarin Hali (Advanced Persona)
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n\n"
         "UMARNI DA TSARIN ILIMI DOKI:\n"
         "1. KAI NE FATA AI: Wata babbar manhajar basira ta artificial intelligence mai zurfin ilimi, dabara, da fasaha matuka.\n"
-        "2. Amsa tambayoyi daki-daki da zurfin bayani mai amfani, gaskiya, da kaifi. Kar ka yi gajeren bayani idan tambayar tana buƙatar zurfafa nazari.\n"
+        "2. Amsa tambayoyi daki-daki da zurfin bayani mai amfani, gaskiya, da kaifi.\n"
         "3. Yi amfani da sahihiyar Hausa mai inganci, bayyananniya, da kwarjini.\n"
         "4. Kar ka riƙa maimaita gaisuwa ko gabatar da kanka a kowane saƙo idan an riga an fara magana; faɗa kai tsaye cikin amsar tambayar."
     )
@@ -58,11 +57,10 @@ async def stream_chat(
             if user_query:
                 contents.append(user_query)
 
-            # 2. Kunna Google Search Tool (Grounding) don samun bayanai na Intanet a take
+            # An cire Search Tool domin kiyaye API Rate Limit (Quota)
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                temperature=0.7,
-                tools=[types.Tool(google_search=types.GoogleSearch())]
+                temperature=0.7
             )
 
             def generate():
