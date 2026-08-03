@@ -45,12 +45,11 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
         try:
-            # Zaɓin model bisa abin da mai amfani ya turo
-            target_model = "gemini-2.5-flash"
+            # Map input model zuwa ainihin valid API model name din Google
+            target_model = "gemini-1.5-flash"
             if model and "pro" in model.lower():
-                target_model = "gemini-2.5-pro"
+                target_model = "gemini-1.5-pro"
 
-            # Tattara kaya (Text / File)
             contents = []
             if file:
                 file_bytes = await file.read()
@@ -65,7 +64,6 @@ async def stream_chat(
                 temperature=0.7
             )
 
-            # Kiran Gemini API ta hanyar da ta dace da SDK
             def generate():
                 return client.models.generate_content_stream(
                     model=target_model,
@@ -83,7 +81,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Adana bayani a MongoDB
+            # Adana bayanai a MongoDB
             chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
