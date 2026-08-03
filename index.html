@@ -168,17 +168,22 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
                 let fullText = "";
+                let buffer = ""; // Buffer don guje wa rushewar JSON na SSE
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split("\n");
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n\n");
+                    
+                    // Rike guntun karshe da bai kammala ba
+                    buffer = lines.pop() || "";
 
                     for (const line of lines) {
-                        if (line.startsWith("data: ")) {
-                            const dataStr = line.replace("data: ", "").trim();
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.startsWith("data: ")) {
+                            const dataStr = trimmedLine.replace(/^data:\s*/, "");
                             if (dataStr === "[DONE]") break;
 
                             try {
@@ -189,7 +194,7 @@
                                     scrollToBottom();
                                 }
                             } catch (err) {
-                                // Ignore non-JSON lines
+                                console.error("Error parsing SSE chunk:", err);
                             }
                         }
                     }
