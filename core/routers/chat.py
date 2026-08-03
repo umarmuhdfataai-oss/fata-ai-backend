@@ -33,7 +33,6 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
       
-    # Dynamic System Instruction
     system_prompt = (
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n"
         "UMARNI MAI MUHIMMANCI:\n"
@@ -50,13 +49,17 @@ async def stream_chat(
             if model and "pro" in model.lower():
                 target_model = "gemini-3.6-pro"
 
-            # Daidaitaccen tsarin kiran Interactions API tare da Google Search Grounding
-            stream = client.interactions.create(
-                model=target_model,
-                input=user_query,
-                system_instruction=system_prompt,
-                tools=[{"type": "google_search"}],
-                stream=True
+            # Gudanar da synchronous stream a cikin asynchronous thread da ke hana blocking
+            loop = asyncio.get_event_loop()
+            stream = await loop.run_in_executor(
+                None,
+                lambda: client.interactions.create(
+                    model=target_model,
+                    input=user_query,
+                    system_instruction=system_prompt,
+                    tools=[{"type": "google_search"}],
+                    stream=True
+                )
             )
 
             for event in stream:
@@ -73,21 +76,25 @@ async def stream_chat(
                 if text_chunk:
                     full_assistant_response += text_chunk
                     yield f"data: {json.dumps({'content': text_chunk})}\n\n"
+                    # Bawa async loop damar tura data zuwa frontend nan take
+                    await asyncio.sleep(0.001)
 
             yield "data: [DONE]\n\n"
 
-            # Adana tattaunawar a MongoDB
+            # Adana tattaunawa a MongoDB (a matsayin background task)
             chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Hoto/Fayil]"}
                 new_ai_msg = {"role": "assistant", "content": full_assistant_response}
-                await chat_collection.update_one(
-                    {"_id": session_id},
-                    {
-                        "$set": {"user_email": user_email},
-                        "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
-                    },
-                    upsert=True
+                asyncio.create_task(
+                    chat_collection.update_one(
+                        {"_id": session_id},
+                        {
+                            "$set": {"user_email": user_email},
+                            "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
+                        },
+                        upsert=True
+                    )
                 )
         except Exception as e:
             err_payload = json.dumps({"content": f"⚠️ Kuskure daga Gemini Engine: {str(e)}"})
