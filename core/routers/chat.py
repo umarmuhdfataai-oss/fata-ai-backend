@@ -42,11 +42,13 @@ async def stream_chat(
     user_query = message.strip() if message else ""
 
     system_prompt = (
-        "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n\n"
+        "ZAMANI DA SHEKARA: Yanzu muna ranar 7 ga Augusta, shekarar 2026 (August 7, 2026).\n\n"
         "UMARNI DA TSARIN FATA AI:\n"
         "1. KAI NE FATA AI: Manhaja mai karfin basira, ilimi, da fasaha matuka.\n"
-        "2. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
-        "3. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
+        "2. Wasan karshe na UEFA Champions League na kakar 2025/2026 ya riga ya faru a tsakiyar shekarar 2026.\n"
+        "3. Yi amfani da bayanan shekarar 2026 a duk sanda aka tambaye ka 'bana' ko labaran yanzu.\n"
+        "4. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
+        "5. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
     )
 
     async def event_generator():
@@ -63,12 +65,9 @@ async def stream_chat(
             if user_query:
                 contents.append(user_query)
 
-            # Duba ko tambayar tana buƙatar Google Search (don adana Quota)
-            search_keywords = ["bincika", "search", "labari", "yanzu", "2026", "who is", "menene", "ina"]
-            requires_search = any(kw in user_query.lower() for kw in search_keywords)
-
-            # Kunna Google Search KAWAI idan ana buƙata
-            tools = [{"google_search": {}}] if requires_search else []
+            # Idan ba gaisuwa ce ta 'slm' ko 'sannu' kawai ba, kunna Google Search
+            is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
+            tools = [] if is_simple_greeting else [{"google_search": {}}]
 
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -86,7 +85,7 @@ async def stream_chat(
             try:
                 response_stream = await asyncio.to_thread(generate, config)
             except Exception as first_err:
-                # Idan kuskuren 429 ya faru saboda Google Search, sake gwadawa BA TARE DA Google Search BA
+                # Idan Google Search ya cika Quota (429), sake gwadawa ba tare da Search ba
                 if "429" in str(first_err) or "RESOURCE_EXHAUSTED" in str(first_err):
                     fallback_config = types.GenerateContentConfig(
                         system_instruction=system_prompt,
