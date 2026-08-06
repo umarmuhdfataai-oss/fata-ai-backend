@@ -5,17 +5,20 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "FATA_AI_ULTRA_SECURE_NODE_98231")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "FATA_AI_ULTRA_SECURE_KEY_2026")
 ALGORITHM = "HS256"
 CryptContextRef = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v2/auth/login", auto_error=False)
 
+
 def verify_password(plain_password, hashed_password):
     return CryptContextRef.verify(plain_password, hashed_password)
 
+
 def get_password_hash(password):
     return CryptContextRef.hash(password)
+
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
@@ -26,14 +29,9 @@ def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials token layer.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     if not token:
-        # Idan ba a aiko da token ba, muna ba shi matsayin guest
         return {"sub": "guest_user"}
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

@@ -8,24 +8,23 @@ from core.routers import chat
 from core.database import connect_to_mongo, close_mongo_connection
 
 
-# 1. MANAGEMENT NA DB CONNECTIONS (LIFESPAN)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Action a lokacin Startup
+    # Action lokacin Startup
     await connect_to_mongo()
     yield
-    # Action a lokacin Shutdown
+    # Action lokacin Shutdown
     await close_mongo_connection()
 
 
 app = FastAPI(
     title="Fata AI Ultra Core API",
-    description="API Engine na Fata AI mai amfani da Google Gemini 3.6 Ultra Core Engine.",
+    description="Engine na Fata AI mai sarrafa Rubutu, Binciken Intanet, Kera Hotuna (Imagen 3), da Aika Muryar Sauti (Voice TTS).",
     version="3.0.0",
     lifespan=lifespan
 )
 
-# 2. SARAFA CORS (Cross-Origin Resource Sharing)
+# 2. CORS MANAGEMENT
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,17 +33,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. HAƊA ROUTER NA CHAT
+# 3. ROUTERS
 app.include_router(chat.router, prefix="/api/v2")
 
 
-# 4. HEALTH CHECK & FRONTEND ROUTES
+# 4. HEALTH CHECK & FRONTEND
 @app.get("/api/health", tags=["Health Check"])
 async def health_check():
     return {
         "status": "Online",
         "system": "Fata AI Ultra Core Engine",
-        "powered_by": "Google Gemini 3.6",
+        "features": [
+            "Gemini Chat & AI Tutor", 
+            "Google Live Search", 
+            "Imagen 3 Generation", 
+            "Voice Synthesis (TTS)"
+        ],
         "year": "2026",
         "message": "Fata AI Backend yana aiki lami lafiya!"
     }
@@ -57,7 +61,7 @@ async def serve_frontend():
         return FileResponse("index.html")
     return {
         "status": "Online",
-        "message": "Fata AI Backend yana aiki, amma ba a sami index.html a root directory ba."
+        "message": "Fata AI Backend yana aiki lami lafiya."
     }
 
 
