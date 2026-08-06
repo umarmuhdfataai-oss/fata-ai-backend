@@ -45,9 +45,8 @@ async def stream_chat(
         "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026 ne.\n\n"
         "UMARNI DA TSARIN FATA AI:\n"
         "1. KAI NE FATA AI: Manhaja mai karfin basira, ilimi, da fasaha matuka.\n"
-        "2. Yi amfani da Google Search a duk lokacin da aka tambaye ka sababbin bayanai ko abubuwan da ke faruwa a yanzu.\n"
-        "3. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
-        "4. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
+        "2. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
+        "3. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
     )
 
     async def event_generator():
@@ -64,20 +63,38 @@ async def stream_chat(
             if user_query:
                 contents.append(user_query)
 
+            # Duba ko tambayar tana buƙatar Google Search (don adana Quota)
+            search_keywords = ["bincika", "search", "labari", "yanzu", "2026", "who is", "menene", "ina"]
+            requires_search = any(kw in user_query.lower() for kw in search_keywords)
+
+            # Kunna Google Search KAWAI idan ana buƙata
+            tools = [{"google_search": {}}] if requires_search else []
+
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=0.7,
-                tools=[{"google_search": {}}]
+                tools=tools if tools else None
             )
 
-            def generate():
+            def generate(cfg):
                 return client.models.generate_content_stream(
                     model=target_model,
                     contents=contents,
-                    config=config
+                    config=cfg
                 )
 
-            response_stream = await asyncio.to_thread(generate)
+            try:
+                response_stream = await asyncio.to_thread(generate, config)
+            except Exception as first_err:
+                # Idan kuskuren 429 ya faru saboda Google Search, sake gwadawa BA TARE DA Google Search BA
+                if "429" in str(first_err) or "RESOURCE_EXHAUSTED" in str(first_err):
+                    fallback_config = types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.7
+                    )
+                    response_stream = await asyncio.to_thread(generate, fallback_config)
+                else:
+                    raise first_err
 
             for chunk in response_stream:
                 if chunk.text:
@@ -104,8 +121,13 @@ async def stream_chat(
                 )
 
         except Exception as e:
-            err_payload = json.dumps({"content": f"⚠️ Kuskure: {str(e)}"})
-            yield f"data: {err_payload}\n\n"
+            err_str = str(e)
+            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                msg = "⚠️ Maɓallin API ya cika ma'aunin amfani na ɗan lokaci. Da fatan ka jira minti 1 sannan ka sake gwada saƙonka."
+            else:
+                msg = f"⚠️ Kuskure: {err_str}"
+
+            yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -164,9 +186,6 @@ async def text_to_speech(
     text: str = Form(...),
     lang: Optional[str] = Form("ha")
 ):
-    """
-    Kewaye rubutun amsar Fata AI zuwa fayil din sauti na MP3
-    """
     if not text:
         raise HTTPException(status_code=400, detail="Muna bukatar rubutun da za a maida sauti.")
 
