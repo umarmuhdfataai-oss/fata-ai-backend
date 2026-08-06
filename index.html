@@ -3,242 +3,300 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fata AI - Ultra Core Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Fata AI - Injin Basira da Ilimi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --user-msg: #2563eb;
+            --ai-msg: #334155;
+            --text-color: #f8fafc;
         }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 3px;
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: var(--user-msg);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            background-color: var(--ai-msg);
+            color: var(--text-color);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-top: 1px solid #334155;
+        }
+
+        .generated-img {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .btn-custom {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+        }
+
+        .btn-custom:hover {
+            background-color: #1d4ed8;
+            color: white;
+        }
+
+        .mode-badge {
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        audio {
+            height: 30px;
+            margin-top: 8px;
+            width: 100%;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+<body>
 
-    <!-- HEADER -->
-    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-4 flex justify-between items-center z-10">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <i class="fa-solid font-bold text-white text-xl">F</i>
-            </div>
-            <div>
-                <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">Fata AI</h1>
-                <p class="text-xs text-slate-400">Powered by Gemini 3.6 Ultra Core</p>
-            </div>
+    <!-- Header -->
+    <header class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-robot text-primary fs-3"></i>
+            <h4 class="m-0 fw-bold">Fata AI <span class="badge bg-primary fs-6">Ultra 2026</span></h4>
         </div>
-        <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Online
-            </span>
+        <div>
+            <span id="chatModeBadge" class="badge bg-success mode-badge p-2" onclick="toggleMode('chat')">Mode: Hira & Bincike</span>
+            <span id="imageModeBadge" class="badge bg-outline-light text-white border mode-badge p-2" onclick="toggleMode('image')">Mode: Kera Hoto</span>
         </div>
     </header>
 
-    <!-- CHAT CONTAINER -->
-    <main id="chat-box" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full">
-        <!-- AI Welcome Message -->
-        <div class="flex gap-3 max-w-[85%]">
-            <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 mt-1">
-                <i class="fa-solid fa-robot text-sm text-white"></i>
-            </div>
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed text-slate-200">
-                Sannu! Ni ne <strong>Fata AI</strong>. Ina sanye da babbar manhajar Google Gemini Ultra Core. Ina iya amsa tambayoyi, bincika hotuna, riƙe tarihi, da gudanar da bincike a Intanet. Ya zan iya taimaka maka a yau?
+    <!-- Chat Box -->
+    <div class="chat-container" id="chatContainer">
+        <div class="d-flex ai-message message-bubble align-items-start gap-2">
+            <div>
+                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI. Zan iya amsa tambayoyinka, gudanar da bincike a Google, kera maka hotuna, da kuma karanta amsoshi da murya. Me kake son mu gudanar yanzu?
             </div>
         </div>
-    </main>
+    </div>
 
-    <!-- INPUT AREA -->
-    <footer class="bg-slate-900 border-t border-slate-800 p-4">
-        <div class="max-w-4xl mx-auto flex flex-col gap-2">
-            
-            <!-- File Preview Area -->
-            <div id="file-preview" class="hidden flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-300 w-fit">
-                <i class="fa-solid fa-file text-indigo-400"></i>
-                <span id="file-name" class="max-w-[200px] truncate">filename.jpg</span>
-                <button onclick="clearFile()" class="text-slate-400 hover:text-red-400 ml-1">
-                    <i class="fa-solid fa-xmark"></i>
+    <!-- Input Form -->
+    <div class="input-area">
+        <form id="chatForm" onsubmit="handleSubmit(event)">
+            <div class="input-group">
+                <input type="file" id="fileInput" class="d-none" accept="image/*,video/*,audio/*,.pdf,.txt" onchange="handleFileSelect()">
+                <button type="button" class="btn btn-outline-secondary text-white" onclick="document.getElementById('fileInput').click()">
+                    <i class="bi bi-paperclip"></i>
+                </button>
+
+                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Rubuta saƙonku ko umarnin hoto..." required>
+
+                <button type="submit" class="btn btn-custom" id="sendBtn">
+                    <i class="bi bi-send-fill"></i>
                 </button>
             </div>
+            <small id="fileLabel" class="text-info mt-1 d-block" style="display: none !important;"></small>
+        </form>
+    </div>
 
-            <!-- Input Form -->
-            <form id="chat-form" onsubmit="handleSend(event)" class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-2 focus-within:border-indigo-500 transition-all shadow-inner">
-                
-                <!-- File Upload Button -->
-                <label for="file-input" class="p-2.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded-xl cursor-pointer transition-colors">
-                    <i class="fa-solid fa-paperclip text-lg"></i>
-                    <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(event)">
-                </label>
-
-                <!-- Text Input -->
-                <input type="text" id="user-input" placeholder="Rubuta saƙonka a nan..." class="flex-1 bg-transparent border-none outline-none text-slate-100 placeholder-slate-500 text-sm px-2" autocomplete="off">
-
-                <!-- Model Selector -->
-                <select id="model-select" class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl px-2.5 py-2 outline-none focus:border-indigo-500">
-                    <option value="gemini-3.6-flash">Flash 3.6</option>
-                    <option value="gemini-3.6-pro">Pro 3.6</option>
-                </select>
-
-                <!-- Send Button -->
-                <button type="submit" id="send-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center">
-                    <i class="fa-solid fa-paper-plane text-sm"></i>
-                </button>
-            </form>
-            <p class="text-[10px] text-center text-slate-500">Fata AI Ultra Core System &bull; 2026</p>
-        </div>
-    </footer>
-
-    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Backend Config
-        const BACKEND_URL = "https://fata-ai-backend-9zxv.onrender.com/api/v2/chat/stream";
-        
-        // Session ID generator
-        let sessionId = localStorage.getItem("fata_session_id");
-        if (!sessionId) {
-            sessionId = "session_" + Math.random().toString(36).substring(2, 9);
-            localStorage.setItem("fata_session_id", sessionId);
-        }
-
+        let currentMode = 'chat'; // 'chat' ko 'image'
         let selectedFile = null;
 
-        function handleFileSelect(e) {
-            if (e.target.files.length > 0) {
-                selectedFile = e.target.files[0];
-                document.getElementById("file-name").innerText = selectedFile.name;
-                document.getElementById("file-preview").classList.remove("hidden");
+        function toggleMode(mode) {
+            currentMode = mode;
+            const chatBadge = document.getElementById('chatModeBadge');
+            const imgBadge = document.getElementById('imageModeBadge');
+            const input = document.getElementById('userInput');
+
+            if (mode === 'chat') {
+                chatBadge.className = "badge bg-success mode-badge p-2";
+                imgBadge.className = "badge bg-outline-light text-white border mode-badge p-2";
+                input.placeholder = "Rubuta saƙonku ko tambaya...";
+            } else {
+                imgBadge.className = "badge bg-warning text-dark mode-badge p-2";
+                chatBadge.className = "badge bg-outline-light text-white border mode-badge p-2";
+                input.placeholder = "Bada bayanin hoton da kake so a kera (Prompt)...";
             }
         }
 
-        function clearFile() {
-            selectedFile = null;
-            document.getElementById("file-input").value = "";
-            document.getElementById("file-preview").classList.add("hidden");
+        function handleFileSelect() {
+            const fileInput = document.getElementById('fileInput');
+            const fileLabel = document.getElementById('fileLabel');
+            if (fileInput.files.length > 0) {
+                selectedFile = fileInput.files[0];
+                fileLabel.innerText = "An zaɓi fayil: " + selectedFile.name;
+                fileLabel.style.setProperty('display', 'block', 'important');
+            }
         }
 
-        async function handleSend(e) {
+        async function handleSubmit(e) {
             e.preventDefault();
-            const inputEl = document.getElementById("user-input");
-            const message = inputEl.value.trim();
-            const model = document.getElementById("model-select").value;
-
+            const inputField = document.getElementById('userInput');
+            const message = inputField.value.trim();
             if (!message && !selectedFile) return;
 
-            // Display User Message
-            appendMessage("user", message, selectedFile ? selectedFile.name : null);
+            // Nuna saƙon mai amfani (User Message)
+            appendMessage(message || (selectedFile ? selectedFile.name : ''), 'user');
+            inputField.value = '';
 
-            // Clear Input
-            inputEl.value = "";
-            const currentFile = selectedFile;
-            clearFile();
-
-            // Append Placeholder AI Message
-            const aiMessageId = "ai-msg-" + Date.now();
-            appendMessage("ai", "", null, aiMessageId);
-            const aiTextElement = document.getElementById(aiMessageId);
-
-            // Prepare Form Data
-            const formData = new FormData();
-            formData.append("message", message);
-            formData.append("session_id", sessionId);
-            formData.append("model", model);
-            if (currentFile) {
-                formData.append("file", currentFile);
+            if (currentMode === 'image') {
+                await generateImage(message);
+            } else {
+                await streamChat(message);
             }
 
+            // Clear selected file
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileLabel').style.setProperty('display', 'none', 'important');
+        }
+
+        function appendMessage(content, sender) {
+            const chatContainer = document.getElementById('chatContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message-bubble ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+            msgDiv.innerHTML = content;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return msgDiv;
+        }
+
+        // 1. HIRA DA BINCIKE (CHAT STREAMING)
+        async function streamChat(message) {
+            const formData = new FormData();
+            formData.append('message', message);
+            if (selectedFile) {
+                formData.append('file', selectedFile);
+            }
+
+            const aiMsgDiv = appendMessage('<em>Fata AI tana tunani...</em>', 'ai');
+            let fullText = '';
+
             try {
-                const response = await fetch(BACKEND_URL, {
-                    method: "POST",
+                const response = await fetch('/api/v2/chat/stream', {
+                    method: 'POST',
                     body: formData
                 });
 
-                if (!response.ok) {
-                    throw new Error("Matafiyin saƙo ya sami matsala.");
-                }
-
                 const reader = response.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let fullText = "";
-                let buffer = ""; // Buffer don guje wa rushewar JSON na SSE
+                const decoder = new TextDecoder();
+                aiMsgDiv.innerHTML = '';
 
                 while (true) {
-                    const { done, value } = await reader.read();
+                    const { value, done } = await reader.read();
                     if (done) break;
 
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n\n");
-                    
-                    // Rike guntun karshe da bai kammala ba
-                    buffer = lines.pop() || "";
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
 
                     for (const line of lines) {
-                        const trimmedLine = line.trim();
-                        if (trimmedLine.startsWith("data: ")) {
-                            const dataStr = trimmedLine.replace(/^data:\s*/, "");
-                            if (dataStr === "[DONE]") break;
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.replace('data: ', '').trim();
+                            if (dataStr === '[DONE]') break;
 
                             try {
                                 const parsed = JSON.parse(dataStr);
                                 if (parsed.content) {
                                     fullText += parsed.content;
-                                    aiTextElement.innerText = fullText;
-                                    scrollToBottom();
+                                    aiMsgDiv.innerText = fullText;
                                 }
-                            } catch (err) {
-                                console.error("Error parsing SSE chunk:", err);
-                            }
+                            } catch (e) {}
                         }
                     }
                 }
+
+                // Ƙara Muryar TTS (Voice Player)
+                if (fullText) {
+                    addVoicePlayer(aiMsgDiv, fullText);
+                }
+
             } catch (err) {
-                aiTextElement.innerText = "⚠️ Kuskure: Na kasa haɗawa da Backend. Tabbatar kana da Intanet ko sake gwadawa.";
-                aiTextElement.classList.add("text-red-400");
+                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen sadarwa da backend.</span>';
             }
         }
 
-        function appendMessage(sender, text, fileName = null, id = null) {
-            const chatBox = document.getElementById("chat-box");
-            const div = document.createElement("div");
+        // 2. KERA HOTO (IMAGEN 3)
+        async function generateImage(prompt) {
+            const formData = new FormData();
+            formData.append('prompt', prompt);
 
-            if (sender === "user") {
-                div.className = "flex gap-3 max-w-[85%] ml-auto justify-end";
-                div.innerHTML = `
-                    <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md text-sm leading-relaxed">
-                        ${fileName ? `<div class="text-xs bg-indigo-700/60 px-2 py-1 rounded mb-2 flex items-center gap-1"><i class="fa-solid fa-file"></i> ${fileName}</div>` : ""}
-                        ${text}
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 mt-1">
-                        <i class="fa-solid fa-user text-xs text-slate-300"></i>
-                    </div>
-                `;
-            } else {
-                div.className = "flex gap-3 max-w-[85%]";
-                div.innerHTML = `
-                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 mt-1">
-                        <i class="fa-solid fa-robot text-sm text-white"></i>
-                    </div>
-                    <div id="${id}" class="bg-slate-900 border border-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed text-slate-200 whitespace-pre-wrap">
-                        <span class="animate-pulse">...</span>
-                    </div>
-                `;
+            const aiMsgDiv = appendMessage('<em>Fata AI tana kera hotonku... (Zai ɗauki ɗan dakƙiƙa)</em>', 'ai');
+
+            try {
+                const res = await fetch('/api/v2/chat/generate-image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.status === 'Success' && data.image_data) {
+                    aiMsgDiv.innerHTML = `
+                        <p class="mb-1">Hoto na <strong>"${prompt}"</strong>:</p>
+                        <img src="${data.image_data}" class="generated-img" alt="Generated Image">
+                    `;
+                } else {
+                    aiMsgDiv.innerHTML = `<span class="text-danger">⚠️ Kuskure: ${data.detail || 'An kasa kera hoton.'}</span>`;
+                }
+            } catch (err) {
+                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen haɗawa da Injin Hoto.</span>';
             }
-
-            chatBox.appendChild(div);
-            scrollToBottom();
         }
 
-        function scrollToBottom() {
-            const chatBox = document.getElementById("chat-box");
-            chatBox.scrollTop = chatBox.scrollHeight;
+        // 3. SAURARON SAUTI DA MURYA (VOICE TTS)
+        async function addVoicePlayer(container, text) {
+            const formData = new FormData();
+            formData.append('text', text.substring(0, 300)); // Sayata ma'auni domin saurin loda
+            formData.append('lang', 'ha');
+
+            try {
+                const res = await fetch('/api/v2/chat/text-to-speech', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const audioUrl = URL.createObjectURL(blob);
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = audioUrl;
+                    container.appendChild(audio);
+                }
+            } catch (e) {
+                console.log("Kuskuren sarrafa sauti:", e);
+            }
         }
     </script>
 </body>
