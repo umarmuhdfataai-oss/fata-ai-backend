@@ -131,6 +131,9 @@
     </div>
 
     <script>
+        // Adreshin Sabarka ta Render
+        const BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
+
         let currentMode = 'chat'; // 'chat' ko 'image'
         let selectedFile = null;
 
@@ -167,7 +170,7 @@
             const message = inputField.value.trim();
             if (!message && !selectedFile) return;
 
-            // Nuna saƙon mai amfani (User Message)
+            // Nuna saƙon mai amfani
             appendMessage(message || (selectedFile ? selectedFile.name : ''), 'user');
             inputField.value = '';
 
@@ -177,7 +180,7 @@
                 await streamChat(message);
             }
 
-            // Clear selected file
+            // Wanke fayil ɗin da aka zaɓa
             selectedFile = null;
             document.getElementById('fileInput').value = '';
             document.getElementById('fileLabel').style.setProperty('display', 'none', 'important');
@@ -205,7 +208,7 @@
             let fullText = '';
 
             try {
-                const response = await fetch('/api/v2/chat/stream', {
+                const response = await fetch(`${BASE_URL}/api/v2/chat/stream`, {
                     method: 'POST',
                     body: formData
                 });
@@ -237,7 +240,7 @@
                     }
                 }
 
-                // Ƙara Muryar TTS (Voice Player)
+                // Ƙara Muryar TTS
                 if (fullText) {
                     addVoicePlayer(aiMsgDiv, fullText);
                 }
@@ -255,7 +258,7 @@
             const aiMsgDiv = appendMessage('<em>Fata AI tana kera hotonku... (Zai ɗauki ɗan dakƙiƙa)</em>', 'ai');
 
             try {
-                const res = await fetch('/api/v2/chat/generate-image', {
+                const res = await fetch(`${BASE_URL}/api/v2/chat/generate-image`, {
                     method: 'POST',
                     body: formData
                 });
@@ -277,11 +280,11 @@
         // 3. SAURARON SAUTI DA MURYA (VOICE TTS)
         async function addVoicePlayer(container, text) {
             const formData = new FormData();
-            formData.append('text', text.substring(0, 300)); // Sayata ma'auni domin saurin loda
+            formData.append('text', text.substring(0, 300));
             formData.append('lang', 'ha');
 
             try {
-                const res = await fetch('/api/v2/chat/text-to-speech', {
+                const res = await fetch(`${BASE_URL}/api/v2/chat/text-to-speech`, {
                     method: 'POST',
                     body: formData
                 });
