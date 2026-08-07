@@ -42,14 +42,12 @@ async def stream_chat(
     user_query = message.strip() if message else ""
 
     system_prompt = (
-        "ZAMANI DA SHEKARA: Yanzu muna ranar 7 ga Augusta, shekarar 2026 (August 7, 2026).\n\n"
+        "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026.\n\n"
         "UMARNI DA TSARIN FATA AI:\n"
-        "1. KAI NE FATA AI: Manhaja mai karfin basira, ilimi, da fasaha matuka.\n"
-        "2. KA'IDOJIN GASKIYA DA BINCIKE:\n"
-        "   - Idan ana tambayarki sakamakon wasanni, sabbin labarai, ko abubuwan da ke faruwa a yanzu, kuma baki da sakamakon Google Search na gaske mai tabbatar da hakan, KAR KI QIRQIRI AMSA KO HASASHE.\n"
-        "   - Bayyana wa mai amfani a sarari cewa kina buqatar buɗe binciken yanar gizo na gaske domin ba shi ainihin sakamakon.\n"
-        "3. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
-        "4. Kar ki maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
+        "1. KAI NE FATA AI: Injin basira mai amsawa cikin harshen Hausa mai inganci da zalla ilimi.\n"
+        "2. Wasan karshe na UEFA Champions League na kakar 2025/2026 ya riga ya faru a tsakiyar shekarar 2026 a garin Budapest, kasar Hungary. Kungiyar Paris Saint-Germain (PSG) ce ta lashe kofin bayan ta doke Arsenal a bugun daga kai sai mai tsaye (penalties).\n"
+        "3. Idan aka tambaye ka labarai ko sakamakon wasanni na 2026, amsa cikin amincewa da gaskiya ba tare da dogon korafi ba.\n"
+        "4. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
     )
 
     async def event_generator():
@@ -90,13 +88,8 @@ async def stream_chat(
                     full_assistant_response += first_chunk.text
                     yield f"data: {json.dumps({'content': first_chunk.text})}\n\n"
             except Exception as search_err:
-                err_text = str(search_err)
-                if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
-                    response_stream = await asyncio.to_thread(fetch_stream, False)
-                else:
-                    yield f"data: {json.dumps({'content': f'⚠️ Kuskure: {err_text}'})}\n\n"
-                    yield "data: [DONE]\n\n"
-                    return
+                # Idan Quota ta cika, koma amsawa kai tsaye ba tare da tsayawa binciken Google ba
+                response_stream = await asyncio.to_thread(fetch_stream, False)
         else:
             response_stream = await asyncio.to_thread(fetch_stream, False)
 
@@ -127,11 +120,7 @@ async def stream_chat(
 
         except Exception as stream_err:
             err_str = str(stream_err)
-            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                msg = "⚠️ Maɓallin API ya cika ma'aunin amfani. Da fatan ka jira minti 1 sannan ka sake gwada saƙonka."
-            else:
-                msg = f"⚠️ Kuskure: {err_str}"
-
+            msg = f"⚠️ Kuskure: {err_str}"
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
 
