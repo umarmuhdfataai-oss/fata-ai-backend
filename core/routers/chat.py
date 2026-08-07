@@ -45,10 +45,11 @@ async def stream_chat(
         "ZAMANI DA SHEKARA: Yanzu muna ranar 7 ga Augusta, shekarar 2026 (August 7, 2026).\n\n"
         "UMARNI DA TSARIN FATA AI:\n"
         "1. KAI NE FATA AI: Manhaja mai karfin basira, ilimi, da fasaha matuka.\n"
-        "2. Wasan karshe na UEFA Champions League na kakar 2025/2026 ya riga ya faru a tsakiyar shekarar 2026.\n"
-        "3. Yi amfani da bayanan shekarar 2026 a duk sanda aka tambaye ka 'bana' ko labaran yanzu.\n"
-        "4. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
-        "5. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
+        "2. KA'IDOJIN GASKIYA DA BINCIKE:\n"
+        "   - Idan ana tambayarki sakamakon wasanni, sabbin labarai, ko abubuwan da ke faruwa a yanzu, kuma baki da sakamakon Google Search na gaske mai tabbatar da hakan, KAR KI QIRQIRI AMSA KO HASASHE.\n"
+        "   - Bayyana wa mai amfani a sarari cewa kina buqatar buɗe binciken yanar gizo na gaske domin ba shi ainihin sakamakon.\n"
+        "3. Amsa tambayoyi daki-daki cikin gamsarwa, Hausa mai inganci, da zalla ilimi.\n"
+        "4. Kar ki maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
     )
 
     async def event_generator():
@@ -80,12 +81,10 @@ async def stream_chat(
                 config=config
             )
 
-        # Gwada kiran API (tare da Search idan ana bukata, ko ba tare da shi ba idan an samu kuskure)
         response_stream = None
         if use_search:
             try:
                 response_stream = await asyncio.to_thread(fetch_stream, True)
-                # Gwada karanta chunk na farko don tabbatar da cewa Search bai fitar da Error 429 ba
                 first_chunk = next(iter(response_stream), None)
                 if first_chunk and first_chunk.text:
                     full_assistant_response += first_chunk.text
@@ -93,7 +92,6 @@ async def stream_chat(
             except Exception as search_err:
                 err_text = str(search_err)
                 if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
-                    # Idan Bincike ya gaza saboda Quota, koma amsawa kai tsaye BA TARE DA BINCIKE BA
                     response_stream = await asyncio.to_thread(fetch_stream, False)
                 else:
                     yield f"data: {json.dumps({'content': f'⚠️ Kuskure: {err_text}'})}\n\n"
