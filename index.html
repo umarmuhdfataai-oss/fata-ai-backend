@@ -6,6 +6,8 @@
     <title>Fata AI - Injin Basira da Ilimi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- MarkedJS don fassara Markdown da nuna hotuna da ke ciki -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -53,16 +55,17 @@
             border-bottom-left-radius: 4px;
         }
 
+        .message-bubble img {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
         .input-area {
             background-color: var(--card-bg);
             padding: 15px;
             border-top: 1px solid #334155;
-        }
-
-        .generated-img {
-            max-width: 100%;
-            border-radius: 12px;
-            margin-top: 10px;
         }
 
         .btn-custom {
@@ -74,11 +77,6 @@
         .btn-custom:hover {
             background-color: #1d4ed8;
             color: white;
-        }
-
-        .mode-badge {
-            font-size: 0.8rem;
-            cursor: pointer;
         }
 
         audio {
@@ -97,8 +95,7 @@
             <h4 class="m-0 fw-bold">Fata AI <span class="badge bg-primary fs-6">Ultra 2026</span></h4>
         </div>
         <div>
-            <span id="chatModeBadge" class="badge bg-success mode-badge p-2" onclick="toggleMode('chat')">Mode: Hira & Bincike</span>
-            <span id="imageModeBadge" class="badge bg-outline-light text-white border mode-badge p-2" onclick="toggleMode('image')">Mode: Kera Hoto</span>
+            <span class="badge bg-success p-2"><i class="bi bi-stars"></i> Yanayin All-in-One</span>
         </div>
     </header>
 
@@ -106,7 +103,7 @@
     <div class="chat-container" id="chatContainer">
         <div class="d-flex ai-message message-bubble align-items-start gap-2">
             <div>
-                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI. Zan iya amsa tambayoyinka, gudanar da bincike a Google, kera maka hotuna, da kuma karanta amsoshi da murya. Me kake son mu gudanar yanzu?
+                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI. Zan iya amsa tambayoyinka, gudanar da bincike a Google, kera maka hotuna, da kuma karanta amsoshi da murya a wuri guda. Me kake son mu gudanar yanzu?
             </div>
         </div>
     </div>
@@ -120,7 +117,7 @@
                     <i class="bi bi-paperclip"></i>
                 </button>
 
-                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Rubuta saƙonku ko umarnin hoto..." required>
+                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Amsa tambaya, nemi bincike, ko ka ce 'haɗa hoton...'" required>
 
                 <button type="submit" class="btn btn-custom" id="sendBtn">
                     <i class="bi bi-send-fill"></i>
@@ -131,28 +128,8 @@
     </div>
 
     <script>
-        // Adreshin Sabarka ta Render
         const BASE_URL = "https://fata-ai-backend-9zxv.onrender.com";
-
-        let currentMode = 'chat'; // 'chat' ko 'image'
         let selectedFile = null;
-
-        function toggleMode(mode) {
-            currentMode = mode;
-            const chatBadge = document.getElementById('chatModeBadge');
-            const imgBadge = document.getElementById('imageModeBadge');
-            const input = document.getElementById('userInput');
-
-            if (mode === 'chat') {
-                chatBadge.className = "badge bg-success mode-badge p-2";
-                imgBadge.className = "badge bg-outline-light text-white border mode-badge p-2";
-                input.placeholder = "Rubuta saƙonku ko tambaya...";
-            } else {
-                imgBadge.className = "badge bg-warning text-dark mode-badge p-2";
-                chatBadge.className = "badge bg-outline-light text-white border mode-badge p-2";
-                input.placeholder = "Bada bayanin hoton da kake so a kera (Prompt)...";
-            }
-        }
 
         function handleFileSelect() {
             const fileInput = document.getElementById('fileInput');
@@ -174,11 +151,8 @@
             appendMessage(message || (selectedFile ? selectedFile.name : ''), 'user');
             inputField.value = '';
 
-            if (currentMode === 'image') {
-                await generateImage(message);
-            } else {
-                await streamChat(message);
-            }
+            // Aika buƙata zuwa guda ɗaya kawai
+            await streamChat(message);
 
             // Wanke fayil ɗin da aka zaɓa
             selectedFile = null;
@@ -190,13 +164,13 @@
             const chatContainer = document.getElementById('chatContainer');
             const msgDiv = document.createElement('div');
             msgDiv.className = `message-bubble ${sender === 'user' ? 'user-message' : 'ai-message'}`;
-            msgDiv.innerHTML = content;
+            msgDiv.innerHTML = sender === 'user' ? content : marked.parse(content);
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return msgDiv;
         }
 
-        // 1. HIRA DA BINCIKE (CHAT STREAMING)
+        // HIRA DA KERA HOTO A WURI GUDA (UNIFIED STREAM)
         async function streamChat(message) {
             const formData = new FormData();
             formData.append('message', message);
@@ -233,15 +207,16 @@
                                 const parsed = JSON.parse(dataStr);
                                 if (parsed.content) {
                                     fullText += parsed.content;
-                                    aiMsgDiv.innerText = fullText;
+                                    aiMsgDiv.innerHTML = marked.parse(fullText);
+                                    document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
                                 }
                             } catch (e) {}
                         }
                     }
                 }
 
-                // Ƙara Muryar TTS
-                if (fullText) {
+                // Kara muryar sauti (TTS) idan ba hoton guda daya kacal aka turo ba
+                if (fullText && !fullText.includes("![") && !fullText.includes("data:image")) {
                     addVoicePlayer(aiMsgDiv, fullText);
                 }
 
@@ -250,34 +225,7 @@
             }
         }
 
-        // 2. KERA HOTO (IMAGEN 3)
-        async function generateImage(prompt) {
-            const formData = new FormData();
-            formData.append('prompt', prompt);
-
-            const aiMsgDiv = appendMessage('<em>Fata AI tana kera hotonku... (Zai ɗauki ɗan dakƙiƙa)</em>', 'ai');
-
-            try {
-                const res = await fetch(`${BASE_URL}/api/v2/chat/generate-image`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-
-                if (data.status === 'Success' && data.image_data) {
-                    aiMsgDiv.innerHTML = `
-                        <p class="mb-1">Hoto na <strong>"${prompt}"</strong>:</p>
-                        <img src="${data.image_data}" class="generated-img" alt="Generated Image">
-                    `;
-                } else {
-                    aiMsgDiv.innerHTML = `<span class="text-danger">⚠️ Kuskure: ${data.detail || 'An kasa kera hoton.'}</span>`;
-                }
-            } catch (err) {
-                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen haɗawa da Injin Hoto.</span>';
-            }
-        }
-
-        // 3. SAURARON SAUTI DA MURYA (VOICE TTS)
+        // SAURARON SAUTI DA MURYA (VOICE TTS)
         async function addVoicePlayer(container, text) {
             const formData = new FormData();
             formData.append('text', text.substring(0, 300));
