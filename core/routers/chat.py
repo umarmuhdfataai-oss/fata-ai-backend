@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import re
 from io import BytesIO
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -20,8 +21,19 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
+def is_image_request(text: str) -> bool:
+    """Hanya ta gano ko mai amfani yana buƙatar kera hoto ne."""
+    keywords = [
+        "hada hoto", "haɗa hoto", "kera hoto", "zana hoto", "zāna hoto",
+        "drow", "draw", "generate image", "create image", "photograph of",
+        "hoton mutun", "hoton wani", "hoton wata", "hoton "
+    ]
+    text_lower = text.lower().strip()
+    return any(kw in text_lower for kw in keywords)
+
+
 # ==========================================
-# 1. HANYAR HIRA DA BINCIKE (CHAT STREAMING)
+# 1. HANYAR HIRA DA KERA HOTO A WURI GUDA (UNIFIED STREAM)
 # ==========================================
 @router.post("/stream")
 async def stream_chat(
@@ -52,6 +64,47 @@ async def stream_chat(
 
     async def event_generator():
         full_assistant_response = ""
+
+        # --- A. IDAN BUKATAR KERA HOTO CE (IMAGE GENERATION) ---
+        if is_image_request(user_query) and not file:
+            yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton da kake buƙata, da fatan ka jira kaɗan...*\n\n'})}\n\n"
+            await asyncio.sleep(0.1)
+
+            try:
+                def create_image():
+                    return client.models.generate_images(
+                        model='imagen-3.0-generate-002',
+                        prompt=user_query,
+                        config=types.GenerateImagesConfig(
+                            number_of_images=1,
+                            output_mime_type="image/jpeg",
+                            aspect_ratio="1:1"
+                        )
+                    )
+
+                result = await asyncio.to_thread(create_image)
+
+                if result and result.generated_images:
+                    image_bytes = result.generated_images[0].image.image_bytes
+                    base64_image = base64.b64encode(image_bytes).decode('utf-8')
+                    image_markdown = f"![{user_query}](data:image/jpeg;base64,{base64_image})\n\nGa hoton da ka bukaci a kera maka!"
+                    
+                    full_assistant_response = image_markdown
+                    yield f"data: {json.dumps({'content': image_markdown})}\n\n"
+                    yield "data: [DONE]\n\n"
+                else:
+                    msg = "⚠️ An samu matsala wajen kera hoton."
+                    yield f"data: {json.dumps({'content': msg})}\n\n"
+                    yield "data: [DONE]\n\n"
+                return
+
+            except Exception as img_err:
+                msg = f"⚠️ Kuskuren Kera Hoto: {str(img_err)}"
+                yield f"data: {json.dumps({'content': msg})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH STREAM) ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
@@ -87,8 +140,7 @@ async def stream_chat(
                 if first_chunk and first_chunk.text:
                     full_assistant_response += first_chunk.text
                     yield f"data: {json.dumps({'content': first_chunk.text})}\n\n"
-            except Exception as search_err:
-                # Idan Quota ta cika, koma amsawa kai tsaye ba tare da tsayawa binciken Google ba
+            except Exception:
                 response_stream = await asyncio.to_thread(fetch_stream, False)
         else:
             response_stream = await asyncio.to_thread(fetch_stream, False)
@@ -102,7 +154,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Adana a MongoDB
+            # Adana Hira a MongoDB
             chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
@@ -119,8 +171,7 @@ async def stream_chat(
                 )
 
         except Exception as stream_err:
-            err_str = str(stream_err)
-            msg = f"⚠️ Kuskure: {err_str}"
+            msg = f"⚠️ Kuskure: {str(stream_err)}"
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
 
@@ -128,52 +179,7 @@ async def stream_chat(
 
 
 # ==========================================
-# 2. HANYAR KERA HOTO (IMAGEN 3)
-# ==========================================
-@router.post("/generate-image", tags=["Fata AI Image Generation"])
-async def generate_image(
-    prompt: str = Form(...),
-    aspect_ratio: Optional[str] = Form("1:1"),
-    current_user: dict = Depends(get_current_user)
-):
-    if not prompt:
-        raise HTTPException(status_code=400, detail="Babu bayanin hoto (prompt).")
-
-    if not client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY ba a tsara shi ba.")
-
-    try:
-        def create_image():
-            return client.models.generate_images(
-                model='imagen-3.0-generate-002',
-                prompt=prompt,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/jpeg",
-                    aspect_ratio=aspect_ratio or "1:1"
-                )
-            )
-
-        result = await asyncio.to_thread(create_image)
-
-        if result and result.generated_images:
-            image_bytes = result.generated_images[0].image.image_bytes
-            base64_image = base64.b64encode(image_bytes).decode('utf-8')
-            
-            return {
-                "status": "Success",
-                "prompt": prompt,
-                "image_data": f"data:image/jpeg;base64,{base64_image}"
-            }
-
-        raise HTTPException(status_code=500, detail="An kasa kera hoton.")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Kuskuren Kera Hoto: {str(e)}")
-
-
-# ==========================================
-# 3. SABUWAR HANYAR SAUTI DA MURYA (VOICE TTS)
+# 2. HANYAR SAUTI DA MURYA (VOICE TTS)
 # ==========================================
 @router.post("/text-to-speech", tags=["Fata AI Voice Engine"])
 async def text_to_speech(
