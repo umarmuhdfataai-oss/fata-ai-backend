@@ -53,48 +53,56 @@ async def stream_chat(
 
     async def event_generator():
         full_assistant_response = ""
-        try:
-            target_model = model.strip() if model else "gemini-3.6-flash"
+        target_model = model.strip() if model else "gemini-3.6-flash"
 
-            contents = []
-            if file:
-                file_bytes = await file.read()
-                mime_type = file.content_type or "image/jpeg"
-                contents.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
+        contents = []
+        if file:
+            file_bytes = await file.read()
+            mime_type = file.content_type or "image/jpeg"
+            contents.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
 
-            if user_query:
-                contents.append(user_query)
+        if user_query:
+            contents.append(user_query)
 
-            # Idan ba gaisuwa ce ta 'slm' ko 'sannu' kawai ba, kunna Google Search
-            is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
-            tools = [] if is_simple_greeting else [{"google_search": {}}]
+        is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
+        use_search = not is_simple_greeting
 
+        def fetch_stream(with_search: bool):
+            tools = [{"google_search": {}}] if with_search else None
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=0.7,
-                tools=tools if tools else None
+                tools=tools
+            )
+            return client.models.generate_content_stream(
+                model=target_model,
+                contents=contents,
+                config=config
             )
 
-            def generate(cfg):
-                return client.models.generate_content_stream(
-                    model=target_model,
-                    contents=contents,
-                    config=cfg
-                )
-
+        # Gwada kiran API (tare da Search idan ana bukata, ko ba tare da shi ba idan an samu kuskure)
+        response_stream = None
+        if use_search:
             try:
-                response_stream = await asyncio.to_thread(generate, config)
-            except Exception as first_err:
-                # Idan Google Search ya cika Quota (429), sake gwadawa ba tare da Search ba
-                if "429" in str(first_err) or "RESOURCE_EXHAUSTED" in str(first_err):
-                    fallback_config = types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                        temperature=0.7
-                    )
-                    response_stream = await asyncio.to_thread(generate, fallback_config)
+                response_stream = await asyncio.to_thread(fetch_stream, True)
+                # Gwada karanta chunk na farko don tabbatar da cewa Search bai fitar da Error 429 ba
+                first_chunk = next(iter(response_stream), None)
+                if first_chunk and first_chunk.text:
+                    full_assistant_response += first_chunk.text
+                    yield f"data: {json.dumps({'content': first_chunk.text})}\n\n"
+            except Exception as search_err:
+                err_text = str(search_err)
+                if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
+                    # Idan Bincike ya gaza saboda Quota, koma amsawa kai tsaye BA TARE DA BINCIKE BA
+                    response_stream = await asyncio.to_thread(fetch_stream, False)
                 else:
-                    raise first_err
+                    yield f"data: {json.dumps({'content': f'⚠️ Kuskure: {err_text}'})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
+        else:
+            response_stream = await asyncio.to_thread(fetch_stream, False)
 
+        try:
             for chunk in response_stream:
                 if chunk.text:
                     full_assistant_response += chunk.text
@@ -119,10 +127,10 @@ async def stream_chat(
                     )
                 )
 
-        except Exception as e:
-            err_str = str(e)
+        except Exception as stream_err:
+            err_str = str(stream_err)
             if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                msg = "⚠️ Maɓallin API ya cika ma'aunin amfani na ɗan lokaci. Da fatan ka jira minti 1 sannan ka sake gwada saƙonka."
+                msg = "⚠️ Maɓallin API ya cika ma'aunin amfani. Da fatan ka jira minti 1 sannan ka sake gwada saƙonka."
             else:
                 msg = f"⚠️ Kuskure: {err_str}"
 
