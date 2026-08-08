@@ -3,6 +3,8 @@ import base64
 import json
 import os
 import re
+import urllib.parse
+import urllib.request
 from io import BytesIO
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -45,6 +47,21 @@ def is_image_request(text: str) -> bool:
     return has_image_word and has_action_word
 
 
+def generate_image_pollinations(prompt: str) -> str:
+    """Injin Kera Hoto na Pollinations AI (Wanda baya kuskuren 404)."""
+    encoded_prompt = urllib.parse.quote(prompt)
+    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=25) as response:
+            img_bytes = response.read()
+            b64 = base64.b64encode(img_bytes).decode('utf-8')
+            return f"![{prompt}](data:image/jpeg;base64,{b64})\n\nGa hoton da ka buƙaci a kera maka!"
+    except Exception:
+        # Idan an samu jinkirin sadarwa, maida madatsar URL kai tsaye
+        return f"![{prompt}]({url})\n\nGa hoton da ka buƙaci a kera maka!"
+
+
 # ==========================================
 # 1. HANYAR HIRA DA KERA HOTO A WURI GUDA (UNIFIED STREAM)
 # ==========================================
@@ -83,51 +100,36 @@ async def stream_chat(
             yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton da kake buƙata, da fatan ka jira kaɗan...*\n\n'})}\n\n"
             await asyncio.sleep(0.1)
 
+            image_markdown = ""
+            # 1. Gwada amfani da Google Imagen
             try:
-                def create_image():
-                    models_to_try = [
-                        'imagen-3.0-fast-generate-001',
-                        'imagen-3.0-generate-002',
-                        'imagen-3.0-generate-001'
-                    ]
-                    last_err = None
-                    for img_model in models_to_try:
-                        try:
-                            return client.models.generate_images(
-                                model=img_model,
-                                prompt=user_query,
-                                config=types.GenerateImagesConfig(
-                                    number_of_images=1,
-                                    output_mime_type="image/jpeg",
-                                    aspect_ratio="1:1"
-                                )
-                            )
-                        except Exception as e:
-                            last_err = e
-                            continue
-                    raise last_err
-
-                result = await asyncio.to_thread(create_image)
-
+                def create_google_image():
+                    return client.models.generate_images(
+                        model='imagen-3.0-generate-002',
+                        prompt=user_query,
+                        config=types.GenerateImagesConfig(
+                            number_of_images=1,
+                            output_mime_type="image/jpeg",
+                            aspect_ratio="1:1"
+                        )
+                    )
+                
+                result = await asyncio.to_thread(create_google_image)
                 if result and result.generated_images:
                     image_bytes = result.generated_images[0].image.image_bytes
                     base64_image = base64.b64encode(image_bytes).decode('utf-8')
                     image_markdown = f"![{user_query}](data:image/jpeg;base64,{base64_image})\n\nGa hoton da ka buƙaci a kera maka!"
-                    
-                    full_assistant_response = image_markdown
-                    yield f"data: {json.dumps({'content': image_markdown})}\n\n"
-                    yield "data: [DONE]\n\n"
-                else:
-                    msg = "⚠️ An samu matsala wajen kera hoton."
-                    yield f"data: {json.dumps({'content': msg})}\n\n"
-                    yield "data: [DONE]\n\n"
-                return
+            except Exception:
+                image_markdown = ""
 
-            except Exception as img_err:
-                msg = f"⚠️ Kuskuren Kera Hoto: {str(img_err)}"
-                yield f"data: {json.dumps({'content': msg})}\n\n"
-                yield "data: [DONE]\n\n"
-                return
+            # 2. Idan Google Imagen ba ta samu ba (misali 404), koma Injin Pollinations AI
+            if not image_markdown:
+                image_markdown = await asyncio.to_thread(generate_image_pollinations, user_query)
+
+            full_assistant_response = image_markdown
+            yield f"data: {json.dumps({'content': image_markdown})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
 
         # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH STREAM) ---
         target_model = model.strip() if model else "gemini-3.6-flash"
