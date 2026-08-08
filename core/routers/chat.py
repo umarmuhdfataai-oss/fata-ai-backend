@@ -24,7 +24,6 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 def is_image_request(text: str) -> bool:
     """
     Hanya mai inganci ta gano ko mai amfani yana buƙatar kera hoto ne.
-    Yana gane kalmomi kamar: 'zananmin hoto', 'yi min hoton', 'kera hoto', 'draw image', dss.
     """
     if not text:
         return False
@@ -43,7 +42,6 @@ def is_image_request(text: str) -> bool:
     has_image_word = bool(re.search(r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures)\b', text_lower))
     has_action_word = bool(re.search(r'\b(zana|zāna|kera|kēra|hada|haɗa|yi|draw|drow|generate|create|make)\b', text_lower))
 
-    # Idan duka biyun suna ciki
     return has_image_word and has_action_word
 
 
@@ -87,15 +85,27 @@ async def stream_chat(
 
             try:
                 def create_image():
-                    return client.models.generate_images(
-                        model='imagen-3.0-generate-002',
-                        prompt=user_query,
-                        config=types.GenerateImagesConfig(
-                            number_of_images=1,
-                            output_mime_type="image/jpeg",
-                            aspect_ratio="1:1"
-                        )
-                    )
+                    models_to_try = [
+                        'imagen-3.0-fast-generate-001',
+                        'imagen-3.0-generate-002',
+                        'imagen-3.0-generate-001'
+                    ]
+                    last_err = None
+                    for img_model in models_to_try:
+                        try:
+                            return client.models.generate_images(
+                                model=img_model,
+                                prompt=user_query,
+                                config=types.GenerateImagesConfig(
+                                    number_of_images=1,
+                                    output_mime_type="image/jpeg",
+                                    aspect_ratio="1:1"
+                                )
+                            )
+                        except Exception as e:
+                            last_err = e
+                            continue
+                    raise last_err
 
                 result = await asyncio.to_thread(create_image)
 
@@ -170,7 +180,6 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Adana Hira a MongoDB
             chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
