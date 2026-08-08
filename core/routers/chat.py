@@ -75,17 +75,18 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
 
-        # --- A. IDAN BUKATAR KERA HOTO CE (FAST DIRECT IMAGE WITH AUTOMATIC ENGLISH TRANSLATION) ---
+        # --- A. IDAN BUKATAR KERA HOTO CE (HIGH-QUALITY ENHANCED PROMPT) ---
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton da kake buƙata, da fatan ka jira kaɗan...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton mai inganci da haske, da fatan ka jira kaɗan...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Step 1: Fassara Hausa prompt zuwa Turanci don Injin Hoto ya fahimta
-                def translate_to_english_prompt():
+                # Step 1: Gemini za ta faɗaɗa umarnin zuwa cike da fito da mutum da bayyananniyar fuska/siffa
+                def enhance_prompt():
                     prompt_conversion = (
-                        "Translate and refine this Hausa user request into a clear, high-quality, detailed English image generation prompt. "
-                        "Output ONLY the final English prompt string, without quotes or additional text.\n\n"
+                        "Convert this Hausa request into a highly detailed, clear, photorealistic 8k English prompt for image generation. "
+                        "Ensure the subject/person is fully visible, well-lit with clear facial and body features, action-focused, "
+                        "and bright daylight lighting. Output ONLY the English prompt string without quotes.\n\n"
                         f"Hausa Request: {user_query}"
                     )
                     res = client.models.generate_content(
@@ -94,12 +95,12 @@ async def stream_chat(
                     )
                     return res.text.strip() if res.text else user_query
 
-                english_prompt = await asyncio.to_thread(translate_to_english_prompt)
+                english_prompt = await asyncio.to_thread(enhance_prompt)
 
-                # Step 2: Tura fassarar English prompt zuwa Injin Hoto
+                # Step 2: Amfani da Injin Flux ta hanyar Pollinations don samun inganci sosai
                 clean_prompt = urllib.parse.quote(english_prompt)
                 seed = random.randint(10000, 99999)
-                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&nologo=true&seed={seed}"
+                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
                 
                 image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da ka buƙaci a kera maka!"
                 
