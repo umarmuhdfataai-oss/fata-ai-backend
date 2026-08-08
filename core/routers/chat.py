@@ -22,14 +22,29 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 def is_image_request(text: str) -> bool:
-    """Hanya ta gano ko mai amfani yana buƙatar kera hoto ne."""
-    keywords = [
-        "hada hoto", "haɗa hoto", "kera hoto", "zana hoto", "zāna hoto",
-        "drow", "draw", "generate image", "create image", "photograph of",
-        "hoton mutun", "hoton wani", "hoton wata", "hoton "
-    ]
+    """
+    Hanya mai inganci ta gano ko mai amfani yana buƙatar kera hoto ne.
+    Yana gane kalmomi kamar: 'zananmin hoto', 'yi min hoton', 'kera hoto', 'draw image', dss.
+    """
+    if not text:
+        return False
+
     text_lower = text.lower().strip()
-    return any(kw in text_lower for kw in keywords)
+
+    # 1. Kalmomi marasa sarari da ake yawan amfani da su
+    explicit_matches = [
+        "zananmin", "zanamin", "hadamin", "haɗamin", "keramin", "kēramin",
+        "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage"
+    ]
+    if any(word in text_lower for word in explicit_matches):
+        return True
+
+    # 2. Amfani da Regex don duba haɗakar kalmar hoto da kalmar aiki
+    has_image_word = bool(re.search(r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures)\b', text_lower))
+    has_action_word = bool(re.search(r'\b(zana|zāna|kera|kēra|hada|haɗa|yi|draw|drow|generate|create|make)\b', text_lower))
+
+    # Idan duka biyun suna ciki
+    return has_image_word and has_action_word
 
 
 # ==========================================
@@ -87,7 +102,7 @@ async def stream_chat(
                 if result and result.generated_images:
                     image_bytes = result.generated_images[0].image.image_bytes
                     base64_image = base64.b64encode(image_bytes).decode('utf-8')
-                    image_markdown = f"![{user_query}](data:image/jpeg;base64,{base64_image})\n\nGa hoton da ka bukaci a kera maka!"
+                    image_markdown = f"![{user_query}](data:image/jpeg;base64,{base64_image})\n\nGa hoton da ka buƙaci a kera maka!"
                     
                     full_assistant_response = image_markdown
                     yield f"data: {json.dumps({'content': image_markdown})}\n\n"
@@ -146,11 +161,12 @@ async def stream_chat(
             response_stream = await asyncio.to_thread(fetch_stream, False)
 
         try:
-            for chunk in response_stream:
-                if chunk.text:
-                    full_assistant_response += chunk.text
-                    yield f"data: {json.dumps({'content': chunk.text})}\n\n"
-                    await asyncio.sleep(0.01)
+            if response_stream:
+                for chunk in response_stream:
+                    if chunk.text:
+                        full_assistant_response += chunk.text
+                        yield f"data: {json.dumps({'content': chunk.text})}\n\n"
+                        await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 
