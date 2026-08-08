@@ -23,23 +23,28 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 def is_image_request(text: str) -> bool:
-    """Hanya mai inganci ta gano ko mai amfani yana buƙatar kera hoto ne."""
+    """Hanya mai faɗi da inganci ta gano ko mai amfani yana buƙatar kera hoto ne."""
     if not text:
         return False
 
     text_lower = text.lower().strip()
 
+    # 1. Kalmomi masu haɗe ko gajeru
     explicit_matches = [
-        "zananmin", "zanamin", "hadamin", "haɗamin", "keramin", "kēramin",
+        "zananmin", "zanamin", "zannanmin", "hadamin", "haɗamin", "keramin", "kēramin",
         "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage"
     ]
     if any(word in text_lower for word in explicit_matches):
         return True
 
-    has_image_word = bool(re.search(r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures)\b', text_lower))
-    has_action_word = bool(re.search(r'\b(zana|zāna|kera|kēra|hada|haɗa|yi|draw|drow|generate|create|make)\b', text_lower))
+    # 2. Faɗaɗa kalmomin aiki na Hausa da Turanci (guda ɗaya ko da bawaye biyu)
+    action_pattern = r'\b(zana|zāna|zannan|zanan|zanna|zayana|kera|kēra|hada|haɗa|yi|yimin|draw|drow|generate|create|make|paint|show)\b'
+    image_pattern = r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures)\b'
 
-    return has_image_word and has_action_word
+    has_action = bool(re.search(action_pattern, text_lower))
+    has_image = bool(re.search(image_pattern, text_lower))
+
+    return has_action and has_image
 
 
 # ==========================================
@@ -75,13 +80,12 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
 
-        # --- A. IDAN BUKATAR KERA HOTO CE (HIGH-QUALITY ENHANCED PROMPT) ---
+        # --- A. IDAN BUKATAR KERA HOTO CE ---
         if is_image_request(user_query) and not file:
             try:
                 yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton mai inganci da haske, da fatan ka jira kaɗan...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Step 1: Gemini za ta faɗaɗa umarnin zuwa cike da fito da mutum da bayyananniyar fuska/siffa
                 def enhance_prompt():
                     prompt_conversion = (
                         "Convert this Hausa request into a highly detailed, clear, photorealistic 8k English prompt for image generation. "
@@ -97,7 +101,6 @@ async def stream_chat(
 
                 english_prompt = await asyncio.to_thread(enhance_prompt)
 
-                # Step 2: Amfani da Injin Flux ta hanyar Pollinations don samun inganci sosai
                 clean_prompt = urllib.parse.quote(english_prompt)
                 seed = random.randint(10000, 99999)
                 image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
@@ -115,7 +118,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH STREAM) ---
+        # --- B. IDAN HIRA CE TA DE-DA-DE ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
