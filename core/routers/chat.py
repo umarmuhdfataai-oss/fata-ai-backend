@@ -1,10 +1,9 @@
 import asyncio
-import base64
 import json
 import os
 import re
+import random
 import urllib.parse
-import urllib.request
 from io import BytesIO
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -24,15 +23,12 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 def is_image_request(text: str) -> bool:
-    """
-    Hanya mai inganci ta gano ko mai amfani yana buƙatar kera hoto ne.
-    """
+    """Hanya mai inganci ta gano ko mai amfani yana buƙatar kera hoto ne."""
     if not text:
         return False
 
     text_lower = text.lower().strip()
 
-    # 1. Kalmomi marasa sarari da ake yawan amfani da su
     explicit_matches = [
         "zananmin", "zanamin", "hadamin", "haɗamin", "keramin", "kēramin",
         "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage"
@@ -40,26 +36,10 @@ def is_image_request(text: str) -> bool:
     if any(word in text_lower for word in explicit_matches):
         return True
 
-    # 2. Amfani da Regex don duba haɗakar kalmar hoto da kalmar aiki
     has_image_word = bool(re.search(r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures)\b', text_lower))
     has_action_word = bool(re.search(r'\b(zana|zāna|kera|kēra|hada|haɗa|yi|draw|drow|generate|create|make)\b', text_lower))
 
     return has_image_word and has_action_word
-
-
-def generate_image_pollinations(prompt: str) -> str:
-    """Injin Kera Hoto na Pollinations AI (Wanda baya kuskuren 404)."""
-    encoded_prompt = urllib.parse.quote(prompt)
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=25) as response:
-            img_bytes = response.read()
-            b64 = base64.b64encode(img_bytes).decode('utf-8')
-            return f"![{prompt}](data:image/jpeg;base64,{b64})\n\nGa hoton da ka buƙaci a kera maka!"
-    except Exception:
-        # Idan an samu jinkirin sadarwa, maida madatsar URL kai tsaye
-        return f"![{prompt}]({url})\n\nGa hoton da ka buƙaci a kera maka!"
 
 
 # ==========================================
@@ -95,41 +75,30 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
 
-        # --- A. IDAN BUKATAR KERA HOTO CE (IMAGE GENERATION) ---
+        # --- A. IDAN BUKATAR KERA HOTO CE (FAST DIRECT IMAGE STREAM) ---
         if is_image_request(user_query) and not file:
-            yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton da kake buƙata, da fatan ka jira kaɗan...*\n\n'})}\n\n"
-            await asyncio.sleep(0.1)
-
-            image_markdown = ""
-            # 1. Gwada amfani da Google Imagen
             try:
-                def create_google_image():
-                    return client.models.generate_images(
-                        model='imagen-3.0-generate-002',
-                        prompt=user_query,
-                        config=types.GenerateImagesConfig(
-                            number_of_images=1,
-                            output_mime_type="image/jpeg",
-                            aspect_ratio="1:1"
-                        )
-                    )
+                # Turo saƙon farko
+                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton da kake buƙata, da fatan ka jira kaɗan...*\n\n'})}\n\n"
+                await asyncio.sleep(0.2)
+
+                # Tsara Direct URL na hoton ba tare da jinkirin sauke bytes ba
+                clean_prompt = urllib.parse.quote(user_query)
+                seed = random.randint(10000, 99999)
+                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&nologo=true&seed={seed}"
                 
-                result = await asyncio.to_thread(create_google_image)
-                if result and result.generated_images:
-                    image_bytes = result.generated_images[0].image.image_bytes
-                    base64_image = base64.b64encode(image_bytes).decode('utf-8')
-                    image_markdown = f"![{user_query}](data:image/jpeg;base64,{base64_image})\n\nGa hoton da ka buƙaci a kera maka!"
-            except Exception:
-                image_markdown = ""
+                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da ka buƙaci a kera maka!"
+                
+                full_assistant_response = image_markdown
+                yield f"data: {json.dumps({'content': image_markdown})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
-            # 2. Idan Google Imagen ba ta samu ba (misali 404), koma Injin Pollinations AI
-            if not image_markdown:
-                image_markdown = await asyncio.to_thread(generate_image_pollinations, user_query)
-
-            full_assistant_response = image_markdown
-            yield f"data: {json.dumps({'content': image_markdown})}\n\n"
-            yield "data: [DONE]\n\n"
-            return
+            except Exception as img_err:
+                msg = f"⚠️ Kuskuren Kera Hoto: {str(img_err)}"
+                yield f"data: {json.dumps({'content': msg})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
         # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH STREAM) ---
         target_model = model.strip() if model else "gemini-3.6-flash"
