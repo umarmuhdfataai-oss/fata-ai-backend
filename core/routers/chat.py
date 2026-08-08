@@ -75,15 +75,29 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
 
-        # --- A. IDAN BUKATAR KERA HOTO CE (FAST DIRECT IMAGE STREAM) ---
+        # --- A. IDAN BUKATAR KERA HOTO CE (FAST DIRECT IMAGE WITH AUTOMATIC ENGLISH TRANSLATION) ---
         if is_image_request(user_query) and not file:
             try:
-                # Turo saƙon farko
                 yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton da kake buƙata, da fatan ka jira kaɗan...*\n\n'})}\n\n"
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.1)
 
-                # Tsara Direct URL na hoton ba tare da jinkirin sauke bytes ba
-                clean_prompt = urllib.parse.quote(user_query)
+                # Step 1: Fassara Hausa prompt zuwa Turanci don Injin Hoto ya fahimta
+                def translate_to_english_prompt():
+                    prompt_conversion = (
+                        "Translate and refine this Hausa user request into a clear, high-quality, detailed English image generation prompt. "
+                        "Output ONLY the final English prompt string, without quotes or additional text.\n\n"
+                        f"Hausa Request: {user_query}"
+                    )
+                    res = client.models.generate_content(
+                        model="gemini-3.6-flash",
+                        contents=prompt_conversion
+                    )
+                    return res.text.strip() if res.text else user_query
+
+                english_prompt = await asyncio.to_thread(translate_to_english_prompt)
+
+                # Step 2: Tura fassarar English prompt zuwa Injin Hoto
+                clean_prompt = urllib.parse.quote(english_prompt)
                 seed = random.randint(10000, 99999)
                 image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&nologo=true&seed={seed}"
                 
