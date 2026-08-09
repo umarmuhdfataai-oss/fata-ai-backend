@@ -2,10 +2,9 @@ import asyncio
 import json
 import os
 import re
-import random
-import urllib.parse
+import base64
 from io import BytesIO
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from gtts import gTTS
@@ -16,20 +15,14 @@ from google.genai import types
 from core.database import get_chat_collection
 from core.security import get_current_user
 
-router = APIRouter(prefix="/chat", tags=["Fata AI Core Engine"])
+router = APIRouter(prefix="/chat", tags=["Fata AI Pure Gemini Engine"])
 
-# --- API KEY ROTATION ENGINE ---
-def get_api_keys() -> List[str]:
-    raw_keys = os.getenv("GEMINI_API_KEY", "")
-    return [k.strip() for k in raw_keys.split(",") if k.strip()]
-
-def get_gemini_client(key_index: int = 0):
-    keys = get_api_keys()
-    if not keys:
-        return None, None
-    idx = key_index % len(keys)
-    selected_key = keys[idx]
-    return genai.Client(api_key=selected_key), idx
+# --- OFFICIAL GEMINI CLIENT SETUP ---
+def get_gemini_client():
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return None
+    return genai.Client(api_key=api_key)
 
 
 def is_image_request(text: str) -> bool:
@@ -56,7 +49,7 @@ def is_image_request(text: str) -> bool:
 
 
 # ==========================================
-# 1. STREAM CHAT & IMAGE GENERATION
+# 1. PURE GEMINI CHAT & NATIVE IMAGEN 3
 # ==========================================
 @router.post("/stream")
 async def stream_chat(
@@ -73,76 +66,61 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
+    # SYSTEM PROMPT FOR UNIVERSAL MULTILINGUAL & CURRENT CONTEXT
     system_prompt = (
-        "ZAMANI DA SHEKARA: Yanzu muna shekarar 2026.\n\n"
-        "UMARNI DA TSARIN FATA AI:\n"
-        "1. KAI NE FATA AI: Injin basira mai amsawa cikin harshen Hausa mai inganci da zalla ilimi sak da Gemini.\n"
-        "2. Wasan karshe na UEFA Champions League na kakar 2025/2026 ya riga ya faru a tsakiyar shekarar 2026 a garin Budapest, kasar Hungary. Kungiyar Paris Saint-Germain (PSG) ce ta lashe kofin bayan ta doke Arsenal a bugun daga kai sai mai tsaye (penalties).\n"
-        "3. Idan aka tambaye ka labarai ko sakamakon wasanni na 2026, amsa cikin amincewa da gaskiya ba tare da dogon korafi ba.\n"
-        "4. Kar ka maimaita gaisuwa mara amfani; tsaya tsaye a kan amsar mai tambaya."
+        "CURRENT YEAR: 2026.\n\n"
+        "YOU ARE FATA AI: An advanced AI collaborator powered strictly by Google Gemini technology.\n"
+        "1. MULTILINGUAL SUPPORT: You support all global languages (Hausa, English, Arabic, French, Spanish, etc.) natively. Always respond in the exact same language used by the user.\n"
+        "2. ACCURACY & CONTEXT: The 2025/2026 UEFA Champions League final took place in mid-2026 in Budapest, Hungary, where Paris Saint-Germain (PSG) defeated Arsenal on penalties.\n"
+        "3. TONE: Be direct, smart, highly accurate, and concise. Avoid unnecessary preambles or repeating greetings."
     )
 
     async def event_generator():
         full_assistant_response = ""
-        keys = get_api_keys()
+        client = get_gemini_client()
 
-        if not keys:
-            msg = "⚠️ Muna sabunta tsarin API Key. Da fatan ka sake gwadawa nan da lokaci kaɗan."
+        if not client:
+            msg = "⚠️ API Key bata inganta ba. Tabbatar ka saka ainihin API Key daga Google AI Studio."
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
-        # --- A. KERA HOTO (HIGH-QUALITY FLUX HYBRID ENGINE) ---
+        # --- A. NATIVE GOOGLE IMAGEN 3 GENERATION ---
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Google Imagen 3...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                english_prompt = user_query
-                
-                # Dynamic translation using rotation keys
-                for attempt in range(len(keys)):
-                    client, _ = get_gemini_client(attempt)
-                    if not client:
-                        continue
-                    try:
-                        def translate_prompt():
-                            prompt_conversion = (
-                                "Convert this Hausa image request into a detailed photo-realistic 8k English prompt. "
-                                "Keep context authentic, realistic lighting, full resolution photography. "
-                                "Output ONLY the English prompt string without commentary or quotes.\n\n"
-                                f"Hausa Request: {user_query}"
-                            )
-                            res = client.models.generate_content(
-                                model="gemini-3.6-flash",
-                                contents=prompt_conversion
-                            )
-                            return res.text.strip() if res.text else user_query
+                def generate_imagen():
+                    return client.models.generate_images(
+                        model='imagen-3.0-generate-002',
+                        prompt=user_query,
+                        config=types.GenerateImagesConfig(
+                            number_of_images=1,
+                            output_mime_type="image/jpeg",
+                            aspect_ratio="1:1"
+                        )
+                    )
 
-                        english_prompt = await asyncio.to_thread(translate_prompt)
-                        break
-                    except Exception:
-                        continue
+                result = await asyncio.to_thread(generate_imagen)
 
-                # Generate image using reliable Flux endpoint
-                encoded_prompt = urllib.parse.quote(english_prompt)
-                seed = random.randint(1000, 999999)
-                image_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={seed}&model=flux"
-
-                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da na kera maka daidai da buƙatarka!"
-
-                full_assistant_response = image_markdown
-                yield f"data: {json.dumps({'content': image_markdown})}\n\n"
-                yield "data: [DONE]\n\n"
-                return
+                if result.generated_images:
+                    for generated_image in result.generated_images:
+                        b64_img = base64.b64encode(generated_image.image.image_bytes).decode('utf-8')
+                        image_markdown = f"![{user_query}](data:image/jpeg;base64,{b64_img})\n\nGa hoton da na kera maka da Google Imagen 3 Engine!"
+                        
+                        full_assistant_response = image_markdown
+                        yield f"data: {json.dumps({'content': image_markdown})}\n\n"
+                        yield "data: [DONE]\n\n"
+                        return
 
             except Exception as e:
-                msg = f"⚠️ Tsaiko wajen kera hoto: {str(e)}"
+                msg = f"⚠️ Kuskuren Imagen 3: {str(e)}\n*Tabbatar ka haɗa Billing Account dinka a Google AI Studio.*"
                 yield f"data: {json.dumps({'content': msg})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. HIRAR RUBUTU DA ROTATION SAFE-GUARD ---
+        # --- B. MULTI-LINGUAL CHAT & GOOGLE SEARCH GROUNDING ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
@@ -154,22 +132,12 @@ async def stream_chat(
         if user_query:
             contents.append(user_query)
 
-        is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
-
-        response_stream = None
-
-        # Cycle through keys to find an active non-exhausted key
-        for attempt in range(len(keys)):
-            client, _ = get_gemini_client(attempt)
-            if not client:
-                continue
-
-            def fetch_stream(use_google_search: bool):
-                tools = [{"google_search": {}}] if use_google_search else None
+        try:
+            def fetch_gemini_stream():
                 config = types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.7,
-                    tools=tools
+                    tools=[{"google_search": {}}]  # Full native search tool
                 )
                 return client.models.generate_content_stream(
                     model=target_model,
@@ -177,30 +145,8 @@ async def stream_chat(
                     config=config
                 )
 
-            try:
-                if not is_simple_greeting:
-                    try:
-                        response_stream = await asyncio.to_thread(fetch_stream, True)
-                    except Exception:
-                        response_stream = await asyncio.to_thread(fetch_stream, False)
-                else:
-                    response_stream = await asyncio.to_thread(fetch_stream, False)
+            response_stream = await asyncio.to_thread(fetch_gemini_stream)
 
-                if response_stream:
-                    # Test first chunk to ensure key is valid and not rate-limited
-                    break
-            except Exception as e:
-                # Catch rate limit or exhaust errors silently and try next key
-                response_stream = None
-                continue
-
-        if response_stream is None:
-            msg = "Sannu! Shafin yana fuskantar cunkoson saƙonni a yanzu. Da fatan ka sake turo tambayarka nan da ɗan daƙiƙa kaɗan."
-            yield f"data: {json.dumps({'content': msg})}\n\n"
-            yield "data: [DONE]\n\n"
-            return
-
-        try:
             for chunk in response_stream:
                 if chunk.text:
                     full_assistant_response += chunk.text
