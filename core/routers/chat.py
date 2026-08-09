@@ -85,7 +85,6 @@ async def stream_chat(
                 yield f"data: {json.dumps({'content': '🎨 *Ina amfani da Injin Imagen 3 wajen ƙera maka hoto mai matukar kaifi...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Step 1: Gemini za ta inganta umarnin zuwa Turanci mai zurfi da kwarewa
                 def enhance_prompt():
                     try:
                         prompt_conversion = (
@@ -106,7 +105,6 @@ async def stream_chat(
 
                 image_markdown = ""
 
-                # Step 2: Gwada Google Imagen 3 da farko
                 try:
                     def generate_imagen():
                         result = client.models.generate_images(
@@ -129,7 +127,6 @@ async def stream_chat(
                         image_markdown = f"![{user_query}]({imagen_b64})\n\nGa hoton da Google Imagen 3 ta kera maka daidai da buƙatarka!"
 
                 except Exception:
-                    # Idan Imagen 3 ta buƙaci Billing ko Quota ta kure, amfani da Injin Flux (Fallback)
                     clean_prompt = urllib.parse.quote(english_prompt)
                     seed = random.randint(10000, 99999)
                     image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
@@ -146,7 +143,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH) ---
+        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH STABLE STREAM) ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
@@ -159,10 +156,9 @@ async def stream_chat(
             contents.append(user_query)
 
         is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
-        use_search = not is_simple_greeting
 
-        def fetch_stream(with_search: bool):
-            tools = [{"google_search": {}}] if with_search else None
+        def fetch_stream(use_google_search: bool):
+            tools = [{"google_search": {}}] if use_google_search else None
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=0.7,
@@ -175,37 +171,36 @@ async def stream_chat(
             )
 
         response_stream = None
-        if use_search:
+
+        # Gwada kiran Gemini tare da Search idan ba gaisuwa ce kawai ba
+        if not is_simple_greeting:
             try:
                 response_stream = await asyncio.to_thread(fetch_stream, True)
-                first_chunk = next(iter(response_stream), None)
-                if first_chunk and first_chunk.text:
-                    full_assistant_response += first_chunk.text
-                    yield f"data: {json.dumps({'content': first_chunk.text})}\n\n"
             except Exception:
-                try:
-                    response_stream = await asyncio.to_thread(fetch_stream, False)
-                except Exception as inner_e:
-                    msg = "⚠️ An samu 'yan cunkoso a sabar. Da fatan ka jira daƙiƙa kaɗan kafin ka sake aiko da saƙo."
-                    yield f"data: {json.dumps({'content': msg})}\n\n"
-                    yield "data: [DONE]\n\n"
-                    return
-        else:
+                # Idan Search din ya sami matsala ko Quota Error, tsarin zai sauya zuwa hira ta gaba daya ba tare da Search ba
+                response_stream = None
+
+        # Idan har yanzu ba a samu stream ba (ko gaisuwa ce), kirata ba tare da Search Tool ba
+        if response_stream is None:
             try:
                 response_stream = await asyncio.to_thread(fetch_stream, False)
-            except Exception as direct_e:
-                msg = "⚠️ An samu 'yan cunkoso a sabar. Da fatan ka jira daƙiƙa kaɗan kafin ka sake aiko da saƙo."
+            except Exception as e:
+                err_text = str(e)
+                if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
+                    msg = "⚠️ An samu matsalar iyakance amfani (Quota limit). Da fatan ka jira daƙiƙa kaɗan ka sake gwadawa ko ka sake sabunta API Key din ka."
+                else:
+                    msg = f"⚠️ Kuskure: {err_text}"
                 yield f"data: {json.dumps({'content': msg})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
 
+        # Aika chunks zuwa frontend
         try:
-            if response_stream:
-                for chunk in response_stream:
-                    if chunk.text:
-                        full_assistant_response += chunk.text
-                        yield f"data: {json.dumps({'content': chunk.text})}\n\n"
-                        await asyncio.sleep(0.01)
+            for chunk in response_stream:
+                if chunk.text:
+                    full_assistant_response += chunk.text
+                    yield f"data: {json.dumps({'content': chunk.text})}\n\n"
+                    await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 
@@ -225,7 +220,7 @@ async def stream_chat(
                 )
 
         except Exception as stream_err:
-            msg = "⚠️ An samu 'yan cunkoso a sabar. Da fatan ka jira daƙiƙa kaɗan kafin ka sake aiko da saƙo."
+            msg = f"⚠️ Tsaiko a saƙo: {str(stream_err)}"
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
 
