@@ -1,7 +1,9 @@
 import asyncio
-import base64
 import json
 import os
+import re
+import random
+import urllib.parse
 from io import BytesIO
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -20,8 +22,31 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
+def is_image_request(text: str) -> bool:
+    """Hanya mai zurfi ta gano kowane irin umarnin zane ko kera hoto."""
+    if not text:
+        return False
+
+    text_lower = text.lower().strip()
+
+    explicit_matches = [
+        "zananmin", "zanamin", "zannanmin", "hadamin", "haɗamin", "keramin", "kēramin",
+        "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage", "key holder"
+    ]
+    if any(word in text_lower for word in explicit_matches):
+        return True
+
+    action_pattern = r'\b(zana|zāna|zannan|zanan|zanna|zayana|kera|kēra|hada|haɗa|yi|yimin|draw|drow|generate|create|make|paint|show)\b'
+    image_pattern = r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures|keyholder|design)\b'
+
+    has_action = bool(re.search(action_pattern, text_lower))
+    has_image = bool(re.search(image_pattern, text_lower))
+
+    return has_action and has_image
+
+
 # ==========================================
-# 1. HANYAR HIRA DA BINCIKE (CHAT STREAMING)
+# 1. HANYAR HIRA DA KERA HOTO A WURI GUDA (UNIFIED STREAM)
 # ==========================================
 @router.post("/stream")
 async def stream_chat(
@@ -33,9 +58,6 @@ async def stream_chat(
 ):
     if not message and not file:
         raise HTTPException(status_code=400, detail="Muna buƙatar saƙo ko fayil.")
-
-    if not client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY ba a tsara shi ba.")
 
     user_email = current_user.get("sub", "guest_user")
     session_id = session_id if session_id else "default_session"
@@ -52,6 +74,34 @@ async def stream_chat(
 
     async def event_generator():
         full_assistant_response = ""
+
+        # --- A. IDAN BUKATAR KERA HOTO CE (SMART FAILOVER IMAGE ENGINE) ---
+        if is_image_request(user_query) and not file:
+            try:
+                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton cikin tsari mai inganci, da fatan ka jira kaɗan...*\n\n'})}\n\n"
+                await asyncio.sleep(0.1)
+
+                # Mayar da sakon zuwa Turanci a saukake ba tare da tsayawa jiran Gemini idan tana cunkoso ba
+                english_prompt = f"A highly detailed, photorealistic 8k clear image, bright daylight lighting, focus on: {user_query}"
+                
+                clean_prompt = urllib.parse.quote(english_prompt)
+                seed = random.randint(10000, 99999)
+                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
+                
+                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da ka buƙaci a kera maka!"
+
+                full_assistant_response = image_markdown
+                yield f"data: {json.dumps({'content': image_markdown})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+            except Exception:
+                msg = "Gafara dai, an samu ɗan tsaiko wajen kera hoton. Da fatan ka sake gwadawa a halin yanzu."
+                yield f"data: {json.dumps({'content': msg})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT STREAM WITH HIDDEN ERROR PROTECTION) ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
@@ -64,10 +114,11 @@ async def stream_chat(
             contents.append(user_query)
 
         is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
-        use_search = not is_simple_greeting
 
-        def fetch_stream(with_search: bool):
-            tools = [{"google_search": {}}] if with_search else None
+        def fetch_stream(use_google_search: bool):
+            if not client:
+                raise Exception("API Key Not Configured")
+            tools = [{"google_search": {}}] if use_google_search else None
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=0.7,
@@ -80,18 +131,22 @@ async def stream_chat(
             )
 
         response_stream = None
-        if use_search:
+
+        if not is_simple_greeting:
             try:
                 response_stream = await asyncio.to_thread(fetch_stream, True)
-                first_chunk = next(iter(response_stream), None)
-                if first_chunk and first_chunk.text:
-                    full_assistant_response += first_chunk.text
-                    yield f"data: {json.dumps({'content': first_chunk.text})}\n\n"
-            except Exception as search_err:
-                # Idan Quota ta cika, koma amsawa kai tsaye ba tare da tsayawa binciken Google ba
+            except Exception:
+                response_stream = None
+
+        if response_stream is None:
+            try:
                 response_stream = await asyncio.to_thread(fetch_stream, False)
-        else:
-            response_stream = await asyncio.to_thread(fetch_stream, False)
+            except Exception:
+                # Saƙo na musamman na Hausa mai kyau (rufe kuskure)
+                msg = "Sannu! Ina fuskantar ɗan yawan saƙonni a yanzu. Da fatan ka sake turo mini tambayarka nan da ɗan daƙiƙa kaɗan."
+                yield f"data: {json.dumps({'content': msg})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
         try:
             for chunk in response_stream:
@@ -102,7 +157,6 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Adana a MongoDB
             chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
@@ -118,9 +172,8 @@ async def stream_chat(
                     )
                 )
 
-        except Exception as stream_err:
-            err_str = str(stream_err)
-            msg = f"⚠️ Kuskure: {err_str}"
+        except Exception:
+            msg = "An samu ɗan tsaiko wajen kammala saƙon. Da fatan ka sake gwadawa."
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
 
@@ -128,52 +181,7 @@ async def stream_chat(
 
 
 # ==========================================
-# 2. HANYAR KERA HOTO (IMAGEN 3)
-# ==========================================
-@router.post("/generate-image", tags=["Fata AI Image Generation"])
-async def generate_image(
-    prompt: str = Form(...),
-    aspect_ratio: Optional[str] = Form("1:1"),
-    current_user: dict = Depends(get_current_user)
-):
-    if not prompt:
-        raise HTTPException(status_code=400, detail="Babu bayanin hoto (prompt).")
-
-    if not client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY ba a tsara shi ba.")
-
-    try:
-        def create_image():
-            return client.models.generate_images(
-                model='imagen-3.0-generate-002',
-                prompt=prompt,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/jpeg",
-                    aspect_ratio=aspect_ratio or "1:1"
-                )
-            )
-
-        result = await asyncio.to_thread(create_image)
-
-        if result and result.generated_images:
-            image_bytes = result.generated_images[0].image.image_bytes
-            base64_image = base64.b64encode(image_bytes).decode('utf-8')
-            
-            return {
-                "status": "Success",
-                "prompt": prompt,
-                "image_data": f"data:image/jpeg;base64,{base64_image}"
-            }
-
-        raise HTTPException(status_code=500, detail="An kasa kera hoton.")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Kuskuren Kera Hoto: {str(e)}")
-
-
-# ==========================================
-# 3. SABUWAR HANYAR SAUTI DA MURYA (VOICE TTS)
+# 2. HANYAR SAUTI DA MURYA (VOICE TTS)
 # ==========================================
 @router.post("/text-to-speech", tags=["Fata AI Voice Engine"])
 async def text_to_speech(
