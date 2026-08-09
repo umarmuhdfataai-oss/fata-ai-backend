@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import os
 import re
@@ -23,23 +24,21 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 def is_image_request(text: str) -> bool:
-    """Hanya mai faɗi da inganci ta gano ko mai amfani yana buƙatar kera hoto ne."""
+    """Hanya mai zurfi ta gano kowane irin umarnin zane ko kera hoto."""
     if not text:
         return False
 
     text_lower = text.lower().strip()
 
-    # 1. Kalmomi masu haɗe ko gajeru
     explicit_matches = [
         "zananmin", "zanamin", "zannanmin", "hadamin", "haɗamin", "keramin", "kēramin",
-        "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage"
+        "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage", "key holder"
     ]
     if any(word in text_lower for word in explicit_matches):
         return True
 
-    # 2. Faɗaɗa kalmomin aiki na Hausa da Turanci (guda ɗaya ko da bawaye biyu)
     action_pattern = r'\b(zana|zāna|zannan|zanan|zanna|zayana|kera|kēra|hada|haɗa|yi|yimin|draw|drow|generate|create|make|paint|show)\b'
-    image_pattern = r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures)\b'
+    image_pattern = r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures|keyholder|design)\b'
 
     has_action = bool(re.search(action_pattern, text_lower))
     has_image = bool(re.search(image_pattern, text_lower))
@@ -80,45 +79,74 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
 
-        # --- A. IDAN BUKATAR KERA HOTO CE ---
+        # --- A. IDAN BUKATAR KERA HOTO CE (PRIMARY: IMAGEN 3, FALLBACK: FLUX) ---
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton mai inganci da haske, da fatan ka jira kaɗan...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina amfani da Injin Imagen 3 wajen ƙera maka hoto mai matukar kaifi...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
+                # Step 1: Gemini za ta inganta umarnin zuwa Turanci mai zurfi da kwarewa
                 def enhance_prompt():
-                    prompt_conversion = (
-                        "Convert this Hausa request into a highly detailed, clear, photorealistic 8k English prompt for image generation. "
-                        "Ensure the subject/person is fully visible, well-lit with clear facial and body features, action-focused, "
-                        "and bright daylight lighting. Output ONLY the English prompt string without quotes.\n\n"
-                        f"Hausa Request: {user_query}"
-                    )
-                    res = client.models.generate_content(
-                        model="gemini-3.6-flash",
-                        contents=prompt_conversion
-                    )
-                    return res.text.strip() if res.text else user_query
+                    try:
+                        prompt_conversion = (
+                            "Convert this Hausa request into an extremely detailed, high-resolution 8k photorealistic prompt for image generation. "
+                            "Specify precise textures, lighting, camera angle, vivid colors, and crystal-clear subject details. "
+                            "Output ONLY the optimized English prompt string without commentary or quotes.\n\n"
+                            f"Hausa Request: {user_query}"
+                        )
+                        res = client.models.generate_content(
+                            model="gemini-3.6-flash",
+                            contents=prompt_conversion
+                        )
+                        return res.text.strip() if res.text else user_query
+                    except Exception:
+                        return f"Photorealistic 8k ultra-detailed image: {user_query}"
 
                 english_prompt = await asyncio.to_thread(enhance_prompt)
 
-                clean_prompt = urllib.parse.quote(english_prompt)
-                seed = random.randint(10000, 99999)
-                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
-                
-                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da ka buƙaci a kera maka!"
-                
+                image_markdown = ""
+
+                # Step 2: Gwada Google Imagen 3 da farko
+                try:
+                    def generate_imagen():
+                        result = client.models.generate_images(
+                            model="imagen-3.0-generate-002",
+                            prompt=english_prompt,
+                            config=types.GenerateImagesConfig(
+                                number_of_images=1,
+                                output_mime_type="image/jpeg",
+                                aspect_ratio="1:1"
+                            )
+                        )
+                        if result.generated_images:
+                            img_bytes = result.generated_images[0].image.image_bytes
+                            b64_img = base64.b64encode(img_bytes).decode("utf-8")
+                            return f"data:image/jpeg;base64,{b64_img}"
+                        return None
+
+                    imagen_b64 = await asyncio.to_thread(generate_imagen)
+                    if imagen_b64:
+                        image_markdown = f"![{user_query}]({imagen_b64})\n\nGa hoton da Google Imagen 3 ta kera maka daidai da buƙatarka!"
+
+                except Exception:
+                    # Idan Imagen 3 ta buƙaci Billing ko Quota ta kure, amfani da Injin Flux (Fallback)
+                    clean_prompt = urllib.parse.quote(english_prompt)
+                    seed = random.randint(10000, 99999)
+                    image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
+                    image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da aka ƙera maka cikin ƙwarewa!"
+
                 full_assistant_response = image_markdown
                 yield f"data: {json.dumps({'content': image_markdown})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
 
             except Exception as img_err:
-                msg = f"⚠️ Kuskuren Kera Hoto: {str(img_err)}"
+                msg = "⚠️ An samu ɗan tsaiko wajen sarrafa hoton. Da fatan ka sake gwadawa."
                 yield f"data: {json.dumps({'content': msg})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. IDAN HIRA CE TA DE-DA-DE ---
+        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT & SEARCH) ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
@@ -155,9 +183,21 @@ async def stream_chat(
                     full_assistant_response += first_chunk.text
                     yield f"data: {json.dumps({'content': first_chunk.text})}\n\n"
             except Exception:
-                response_stream = await asyncio.to_thread(fetch_stream, False)
+                try:
+                    response_stream = await asyncio.to_thread(fetch_stream, False)
+                except Exception as inner_e:
+                    msg = "⚠️ An samu 'yan cunkoso a sabar. Da fatan ka jira daƙiƙa kaɗan kafin ka sake aiko da saƙo."
+                    yield f"data: {json.dumps({'content': msg})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
         else:
-            response_stream = await asyncio.to_thread(fetch_stream, False)
+            try:
+                response_stream = await asyncio.to_thread(fetch_stream, False)
+            except Exception as direct_e:
+                msg = "⚠️ An samu 'yan cunkoso a sabar. Da fatan ka jira daƙiƙa kaɗan kafin ka sake aiko da saƙo."
+                yield f"data: {json.dumps({'content': msg})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
         try:
             if response_stream:
@@ -185,7 +225,7 @@ async def stream_chat(
                 )
 
         except Exception as stream_err:
-            msg = f"⚠️ Kuskure: {str(stream_err)}"
+            msg = "⚠️ An samu 'yan cunkoso a sabar. Da fatan ka jira daƙiƙa kaɗan kafin ka sake aiko da saƙo."
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
 
