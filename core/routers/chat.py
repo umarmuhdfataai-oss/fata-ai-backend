@@ -18,20 +18,23 @@ from core.security import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Fata AI Core Engine"])
 
-# --- API KEY ROTATION SYSTEM ---
-raw_keys = os.getenv("GEMINI_API_KEY", "")
-API_KEYS: List[str] = [k.strip() for k in raw_keys.split(",") if k.strip()]
+# --- API KEY ROTATION ENGINE ---
+def get_api_keys() -> List[str]:
+    raw_keys = os.getenv("GEMINI_API_KEY", "")
+    return [k.strip() for k in raw_keys.split(",") if k.strip()]
 
-def get_gemini_client():
-    """Zabar API Key ta hanyar sarrafa rotation don guje wa Quota Limits."""
-    if not API_KEYS:
+def get_gemini_client(attempt: int = 0):
+    """Zaɓar client daga sauran keys ɗin da ke akwai."""
+    keys = get_api_keys()
+    if not keys:
         return None
-    selected_key = random.choice(API_KEYS)
+    # Zaɓar key daban-daban a kowane kira
+    selected_key = keys[attempt % len(keys)]
     return genai.Client(api_key=selected_key)
 
 
 def is_image_request(text: str) -> bool:
-    """Gano ko mai amfani yana buƙatar kera hoto."""
+    """Gano idan mai amfani yana buƙatar kera hoto."""
     if not text:
         return False
 
@@ -54,7 +57,7 @@ def is_image_request(text: str) -> bool:
 
 
 # ==========================================
-# 1. HIRA DA KERA HOTO (PURE GEMINI & IMAGEN 3)
+# 1. STREAM CHAT & IMAGEN 3 GENERATION
 # ==========================================
 @router.post("/stream")
 async def stream_chat(
@@ -82,59 +85,74 @@ async def stream_chat(
 
     async def event_generator():
         full_assistant_response = ""
-        client = get_gemini_client()
+        keys = get_api_keys()
 
-        if not client:
-            msg = "⚠️ Muna gyaran tsarin API Key. Da fatan ka sake gwadawa nan da lokaci kalilan."
+        if not keys:
+            msg = "⚠️ Muna sabunta tsarin API Key. Da fatan ka sake gwadawa nan da daƙiƙa guda."
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
-        # --- A. KERA HOTO DA GOOGLE IMAGEN 3 DIRECT ---
+        # --- A. KERA HOTO ZALLA DA GOOGLE IMAGEN 3 ---
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina amfani da Injin Google Imagen 3 wajen ƙera maka hoton...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina amfani da Google Imagen 3 wajen ƙera maka hoton...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Step 1: Google Gemini Flash za ta fassara umarnin zuwa cikakken English Prompt
-                def translate_prompt():
-                    prompt_conversion = (
-                        "Convert this Hausa image request into a highly detailed, photo-realistic 8k English prompt for Google Imagen 3. "
-                        "Keep context authentic (e.g., African setting if natural to query), realistic lighting, high resolution photography. "
-                        "Output ONLY the English prompt string without commentary or quotes.\n\n"
-                        f"Hausa Request: {user_query}"
-                    )
-                    res = client.models.generate_content(
-                        model="gemini-3.6-flash",
-                        contents=prompt_conversion
-                    )
-                    return res.text.strip() if res.text else user_query
+                imagen_b64 = None
+                
+                # Try cycling through available keys if rate-limited
+                for attempt in range(len(keys)):
+                    client = get_gemini_client(attempt)
+                    if not client:
+                        continue
+                    try:
+                        # 1. Translate Hausa Request to English Prompt
+                        def translate_prompt():
+                            prompt_conversion = (
+                                "Convert this Hausa image request into a highly realistic, photo-realistic 8k English prompt for Google Imagen 3. "
+                                "Keep context authentic, sharp realistic lighting, full body shot, high-resolution photo. "
+                                "Output ONLY the English prompt string without commentary or quotes.\n\n"
+                                f"Hausa Request: {user_query}"
+                            )
+                            res = client.models.generate_content(
+                                model="gemini-3.6-flash",
+                                contents=prompt_conversion
+                            )
+                            return res.text.strip() if res.text else user_query
 
-                english_prompt = await asyncio.to_thread(translate_prompt)
+                        english_prompt = await asyncio.to_thread(translate_prompt)
 
-                # Step 2: Kera hoton kai tsaye ta hanyar Google Imagen 3 Model
-                def generate_imagen_3():
-                    res = client.models.generate_images(
-                        model="imagen-3.0-generate-002",
-                        prompt=english_prompt,
-                        config=types.GenerateImagesConfig(
-                            number_of_images=1,
-                            output_mime_type="image/jpeg",
-                            aspect_ratio="1:1"
-                        )
-                    )
-                    if res.generated_images:
-                        img_bytes = res.generated_images[0].image.image_bytes
-                        b64_img = base64.b64encode(img_bytes).decode("utf-8")
-                        return f"data:image/jpeg;base64,{b64_img}"
-                    return None
+                        # 2. Generate Image via Imagen 3
+                        def generate_imagen_3():
+                            res = client.models.generate_images(
+                                model="imagen-3.0-generate-002",
+                                prompt=english_prompt,
+                                config=types.GenerateImagesConfig(
+                                    number_of_images=1,
+                                    output_mime_type="image/jpeg",
+                                    aspect_ratio="1:1"
+                                )
+                            )
+                            if res.generated_images:
+                                img_bytes = res.generated_images[0].image.image_bytes
+                                b64_img = base64.b64encode(img_bytes).decode("utf-8")
+                                return f"data:image/jpeg;base64,{b64_img}"
+                            return None
 
-                imagen_b64 = await asyncio.to_thread(generate_imagen_3)
+                        imagen_b64 = await asyncio.to_thread(generate_imagen_3)
+                        if imagen_b64:
+                            break  # Success! Exit key loop
+                    except Exception as e:
+                        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                            continue  # Try next key in array
+                        else:
+                            raise e
 
                 if imagen_b64:
                     image_markdown = f"![{user_query}]({imagen_b64})\n\nGa hoton da Google Imagen 3 ta kera maka sak daidai da buƙatarka!"
                 else:
-                    image_markdown = "⚠️ An samu matsalolin hanyar sadarwa wajen kera hoton Imagen 3."
+                    image_markdown = "⚠️ Da fatan ka sake aiko da saƙon, an samu ɗan tsaiko na lokaci kaɗan a sabar Gemini."
 
                 full_assistant_response = image_markdown
                 yield f"data: {json.dumps({'content': image_markdown})}\n\n"
@@ -142,11 +160,7 @@ async def stream_chat(
                 return
 
             except Exception as e:
-                err_msg = str(e)
-                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                    msg = "⚠️ An samu karancin quota a Gemini Imagen 3. Da fatan ka sake gwadawa ko ka kara API Keys."
-                else:
-                    msg = f"⚠️ Kuskuren kera hoto: {err_msg}"
+                msg = f"⚠️ An samu matsalolin hanyar sadarwa: {str(e)}"
                 yield f"data: {json.dumps({'content': msg})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
@@ -165,39 +179,49 @@ async def stream_chat(
 
         is_simple_greeting = user_query.lower() in ["slm", "salam", "salamu alaikum", "sannu", "hi", "hello"]
 
-        def fetch_stream(use_google_search: bool):
-            tools = [{"google_search": {}}] if use_google_search else None
-            config = types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.7,
-                tools=tools
-            )
-            return client.models.generate_content_stream(
-                model=target_model,
-                contents=contents,
-                config=config
-            )
-
         response_stream = None
 
-        if not is_simple_greeting:
+        # Cycle through keys to find an active one for text chat stream
+        for attempt in range(len(keys)):
+            client = get_gemini_client(attempt)
+            if not client:
+                continue
+
+            def fetch_stream(use_google_search: bool):
+                tools = [{"google_search": {}}] if use_google_search else None
+                config = types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.7,
+                    tools=tools
+                )
+                return client.models.generate_content_stream(
+                    model=target_model,
+                    contents=contents,
+                    config=config
+                )
+
             try:
-                response_stream = await asyncio.to_thread(fetch_stream, True)
-            except Exception:
-                response_stream = None
+                if not is_simple_greeting:
+                    try:
+                        response_stream = await asyncio.to_thread(fetch_stream, True)
+                    except Exception:
+                        response_stream = await asyncio.to_thread(fetch_stream, False)
+                else:
+                    response_stream = await asyncio.to_thread(fetch_stream, False)
+
+                if response_stream:
+                    break
+            except Exception as e:
+                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                    continue
+                else:
+                    break
 
         if response_stream is None:
-            try:
-                response_stream = await asyncio.to_thread(fetch_stream, False)
-            except Exception as e:
-                err_text = str(e)
-                if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
-                    msg = "⚠️ An sami karancin Quota a API Key dinka. Da fatan ka sake tura sakon ko ka kara API Key a `.env`."
-                else:
-                    msg = f"⚠️ Kuskure: {err_text}"
-                yield f"data: {json.dumps({'content': msg})}\n\n"
-                yield "data: [DONE]\n\n"
-                return
+            msg = "Sannu! Ina fuskantar ɗan yawan saƙonni a yanzu. Da fatan ka sake turo mini tambayarka nan da ɗan daƙiƙa kaɗan."
+            yield f"data: {json.dumps({'content': msg})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
 
         try:
             for chunk in response_stream:
