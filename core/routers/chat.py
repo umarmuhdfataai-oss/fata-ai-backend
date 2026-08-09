@@ -45,6 +45,36 @@ def is_image_request(text: str) -> bool:
     return has_action and has_image
 
 
+def fallback_hausa_translator(text: str) -> str:
+    """Fassara mai sauƙi idan Gemini API Quota ta kure tana ba da matsala."""
+    clean_text = text.lower()
+    # Cire kalmomin neman hoto
+    remove_words = [
+        "zanamin hoton", "zananmin hoton", "zanamin hoto", "zananmin hoto",
+        "zanamin", "zannanmin", "hadamin hoton", "keramin hoton", "yimin hoton",
+        "zana", "hoto", "hoton", "hotuna", "kera", "hada", "draw", "generate"
+    ]
+    for w in remove_words:
+        clean_text = clean_text.replace(w, "")
+
+    clean_text = clean_text.strip()
+
+    # Dictionary na sauƙaƙan kalmomi
+    dictionary = {
+        "mutun": "a man", "mutum": "a man", "saran bishiya": "chopping a tree with an axe",
+        "sara bishiya": "chopping a tree", "saran": "chopping", "bishiya": "tree",
+        "daji": "forest", "motoci": "cars", "mota": "car", "gida": "house",
+        "fada": "palace", "sarki": "king", "mace": "woman", "yarinya": "girl",
+        "yaro": "boy", "kare": "dog", "katsu": "cat", "zanen": "design of"
+    }
+
+    translated = clean_text
+    for ha, en in dictionary.items():
+        translated = re.sub(rf'\b{ha}\b', en, translated)
+
+    return f"A realistic 8k photorealistic image of {translated}, clear details, vibrant daylight"
+
+
 # ==========================================
 # 1. HANYAR HIRA DA KERA HOTO A WURI GUDA (UNIFIED STREAM)
 # ==========================================
@@ -75,15 +105,38 @@ async def stream_chat(
     async def event_generator():
         full_assistant_response = ""
 
-        # --- A. IDAN BUKATAR KERA HOTO CE (SMART FAILOVER IMAGE ENGINE) ---
+        # --- A. IDAN BUKATAR KERA HOTO CE (SMART ACCURATE IMAGE GENERATION) ---
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton cikin tsari mai inganci, da fatan ka jira kaɗan...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina fassara umarnin da kera maka hoton daidai...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Mayar da sakon zuwa Turanci a saukake ba tare da tsayawa jiran Gemini idan tana cunkoso ba
-                english_prompt = f"A highly detailed, photorealistic 8k clear image, bright daylight lighting, focus on: {user_query}"
-                
+                # Step 1: Gwada amfani da Gemini wajen fassara Hausa zuwa English Prompt mai kyau
+                english_prompt = ""
+                if client:
+                    try:
+                        def translate_prompt():
+                            prompt_conversion = (
+                                "Convert this Hausa request into an extremely detailed 8k English prompt for an image generator. "
+                                "Make sure the subject and its actions are exact and precise. "
+                                "Output ONLY the English prompt string without commentary or quotes.\n\n"
+                                f"Hausa Request: {user_query}"
+                            )
+                            res = client.models.generate_content(
+                                model="gemini-3.6-flash",
+                                contents=prompt_conversion
+                            )
+                            return res.text.strip() if res.text else None
+
+                        english_prompt = await asyncio.to_thread(translate_prompt)
+                    except Exception:
+                        english_prompt = None
+
+                # Step 2: Idan Gemini API ba ta amsa ba (ko quota ta kure), amfani da Fallback Translator
+                if not english_prompt:
+                    english_prompt = fallback_hausa_translator(user_query)
+
+                # Step 3: Kera hoton ta Flux / Pollinations
                 clean_prompt = urllib.parse.quote(english_prompt)
                 seed = random.randint(10000, 99999)
                 image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
@@ -101,7 +154,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. IDAN HIRA CE TA DE-DA-DE (TEXT STREAM WITH HIDDEN ERROR PROTECTION) ---
+        # --- B. IDAN HIRA CE TA DE-DA-DE ---
         target_model = model.strip() if model else "gemini-3.6-flash"
 
         contents = []
@@ -142,7 +195,6 @@ async def stream_chat(
             try:
                 response_stream = await asyncio.to_thread(fetch_stream, False)
             except Exception:
-                # Saƙo na musamman na Hausa mai kyau (rufe kuskure)
                 msg = "Sannu! Ina fuskantar ɗan yawan saƙonni a yanzu. Da fatan ka sake turo mini tambayarka nan da ɗan daƙiƙa kaɗan."
                 yield f"data: {json.dumps({'content': msg})}\n\n"
                 yield "data: [DONE]\n\n"
