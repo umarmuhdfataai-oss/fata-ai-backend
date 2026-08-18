@@ -9,18 +9,18 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from gtts import gTTS
-from groq import Groq
+from groq import AsyncGroq
 
 from core.database import get_chat_collection
 
 router = APIRouter(prefix="/chat", tags=["Fata AI Engine"])
 
-# --- OFFICIAL GROQ CLIENT SETUP ---
-def get_groq_client():
+# --- OFFICIAL ASYNC GROQ CLIENT SETUP ---
+def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
         return None
-    return Groq(api_key=api_key)
+    return AsyncGroq(api_key=api_key)
 
 
 def is_image_request(text: str) -> bool:
@@ -87,23 +87,19 @@ async def stream_chat(
                 yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Flux Engine...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                def enhance_prompt():
-                    res = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
-                        ]
-                    )
-                    return res.choices[0].message.content.strip() if res.choices else user_query
+                res = await client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
+                    ]
+                )
+                english_prompt = res.choices[0].message.content.strip() if res.choices else user_query
 
-                english_prompt = await asyncio.to_thread(enhance_prompt)
                 encoded_prompt = urllib.parse.quote(english_prompt)
                 seed = random.randint(1, 999999)
                 
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&seed={seed}&nologo=true"
-
                 image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da na kera maka!"
-                full_assistant_response = image_markdown
                 
                 yield f"data: {json.dumps({'content': image_markdown})}\n\n"
                 yield "data: [DONE]\n\n"
@@ -116,47 +112,42 @@ async def stream_chat(
                 return
 
         # --- B. CHAT STREAMING WITH GROQ (LLAMA 3.3 70B) ---
-        target_model = "llama-3.3-70b-versatile"
-
+        target_model = model or "llama-3.3-70b-versatile"
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
 
         try:
-            def fetch_groq_stream():
-                return client.chat.completions.create(
-                    model=target_model,
-                    messages=messages,
-                    temperature=0.7,
-                    stream=True
-                )
+            response_stream = await client.chat.completions.create(
+                model=target_model,
+                messages=messages,
+                temperature=0.7,
+                stream=True
+            )
 
-            response_stream = await asyncio.to_thread(fetch_groq_stream)
-
-            for chunk in response_stream:
+            async for chunk in response_stream:
                 if chunk.choices and chunk.choices[0].delta.content:
                     text_chunk = chunk.choices[0].delta.content
                     full_assistant_response += text_chunk
                     yield f"data: {json.dumps({'content': text_chunk})}\n\n"
-                    await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 
-            # Adana Hira a Database (Idan akwai)
+            # Adana Hira a Database (Asynchronously)
             try:
                 chat_collection = get_chat_collection()
                 if chat_collection is not None:
                     new_user_msg = {"role": "user", "content": user_query or "[Fayil]"}
                     new_ai_msg = {"role": "assistant", "content": full_assistant_response}
-                    asyncio.create_task(
-                        chat_collection.update_one(
-                            {"_id": session_id},
-                            {
-                                "$set": {"user_email": user_email},
-                                "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
-                            },
-                            upsert=True
-                        )
+                    
+                    # Tabbatar an yi update_one cikin dacewa da async driver (Motor)
+                    await chat_collection.update_one(
+                        {"_id": session_id},
+                        {
+                            "$set": {"user_email": user_email},
+                            "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
+                        },
+                        upsert=True
                     )
             except Exception:
                 pass
