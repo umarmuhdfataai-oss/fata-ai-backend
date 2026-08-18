@@ -15,6 +15,9 @@ from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
+# Direct target model ID for Groq
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
@@ -48,7 +51,7 @@ def is_image_request(text: str) -> bool:
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("llama-3.1-8b-instant"),
+    model: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None)
 ):
     if not message and not file:
@@ -76,6 +79,9 @@ async def stream_chat(
             yield "data: [DONE]\n\n"
             return
 
+        # Explicitly enforce working active Groq model
+        target_model = DEFAULT_GROQ_MODEL
+
         # FLUX IMAGE GENERATION
         if is_image_request(user_query) and not file:
             try:
@@ -83,7 +89,7 @@ async def stream_chat(
                 await asyncio.sleep(0.1)
 
                 res = await client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model=target_model,
                     messages=[
                         {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
                     ]
@@ -107,7 +113,6 @@ async def stream_chat(
                 return
 
         # CHAT STREAMING WITH GROQ
-        target_model = model or "llama-3.1-8b-instant"
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
