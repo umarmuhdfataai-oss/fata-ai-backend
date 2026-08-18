@@ -15,8 +15,8 @@ from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
-# Direct target model ID for Groq
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+# Active model dynamically selected from Playground
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
 
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -79,7 +79,6 @@ async def stream_chat(
             yield "data: [DONE]\n\n"
             return
 
-        # Explicitly enforce working active Groq model
         target_model = DEFAULT_GROQ_MODEL
 
         # FLUX IMAGE GENERATION
@@ -121,7 +120,7 @@ async def stream_chat(
             response_stream = await client.chat.completions.create(
                 model=target_model,
                 messages=messages,
-                temperature=0.7,
+                temperature=1,
                 stream=True
             )
 
