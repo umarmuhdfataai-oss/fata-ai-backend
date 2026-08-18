@@ -56,7 +56,7 @@ def is_image_request(text: str) -> bool:
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("gemini-1.5-flash"),
+    model: Optional[str] = Form("gemini-3.6-flash"),
     file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user)
 ):
@@ -91,11 +91,11 @@ async def stream_chat(
                 yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Flux Engine...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Fassara da inganta prompt zuwa Turanci ta hanyar Gemini
+                # Fassara da inganta prompt zuwa Turanci ta hanyar Gemini 3.6 Flash
                 def enhance_prompt():
                     enhancer = f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."
                     res = client.models.generate_content(
-                        model="gemini-1.5-flash",
+                        model="gemini-3.6-flash",
                         contents=enhancer
                     )
                     return res.text.strip() if res.text else user_query
@@ -120,8 +120,8 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. CHAT STREAMING WITH GEMINI 1.5 FLASH ---
-        target_model = "gemini-1.5-flash"
+        # --- B. CHAT STREAMING WITH GEMINI 3.6 FLASH ---
+        target_model = "gemini-3.6-flash"
 
         contents = []
         if file:
