@@ -13,9 +13,8 @@ from groq import AsyncGroq
 
 from core.database import get_chat_collection
 
-router = APIRouter(prefix="/chat", tags=["Fata AI Engine"])
+router = APIRouter(tags=["Fata AI Engine"])
 
-# --- OFFICIAL ASYNC GROQ CLIENT SETUP ---
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
@@ -24,7 +23,6 @@ def get_groq_client() -> Optional[AsyncGroq]:
 
 
 def is_image_request(text: str) -> bool:
-    """Gano idan mai amfani yana buƙatar kera hoto."""
     if not text:
         return False
 
@@ -46,10 +44,7 @@ def is_image_request(text: str) -> bool:
     return has_action and has_image
 
 
-# ==========================================
-# 1. UNIFIED STREAM CHAT & FLUX IMAGE ENGINE (GROQ)
-# ==========================================
-@router.post("/stream")
+@router.post("/chat/stream")
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
@@ -81,7 +76,7 @@ async def stream_chat(
             yield "data: [DONE]\n\n"
             return
 
-        # --- A. FLUX IMAGE GENERATION ---
+        # FLUX IMAGE GENERATION
         if is_image_request(user_query) and not file:
             try:
                 yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Flux Engine...*\n\n'})}\n\n"
@@ -111,7 +106,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. CHAT STREAMING WITH GROQ (LLAMA 3.3 70B) ---
+        # CHAT STREAMING WITH GROQ
         target_model = model or "llama-3.3-70b-versatile"
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
@@ -133,14 +128,13 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Adana Hira a Database (Asynchronously)
+            # Database Update
             try:
                 chat_collection = get_chat_collection()
                 if chat_collection is not None:
                     new_user_msg = {"role": "user", "content": user_query or "[Fayil]"}
                     new_ai_msg = {"role": "assistant", "content": full_assistant_response}
                     
-                    # Tabbatar an yi update_one cikin dacewa da async driver (Motor)
                     await chat_collection.update_one(
                         {"_id": session_id},
                         {
@@ -160,10 +154,7 @@ async def stream_chat(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-# ==========================================
-# 2. VOICE TTS ENGINE
-# ==========================================
-@router.post("/text-to-speech", tags=["Fata AI Voice Engine"])
+@router.post("/chat/text-to-speech", tags=["Fata AI Voice Engine"])
 async def text_to_speech(
     text: str = Form(...),
     lang: Optional[str] = Form("ha")

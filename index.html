@@ -94,7 +94,7 @@
             <h4 class="m-0 fw-bold">Fata AI <span class="badge bg-primary fs-6">Ultra 2026</span></h4>
         </div>
         <div>
-            <span class="badge bg-success p-2"><i class="bi bi-stars"></i> Injin Flux + Gemini</span>
+            <span class="badge bg-success p-2"><i class="bi bi-lightning-charge-fill"></i> Flux + Groq Llama 3.3</span>
         </div>
     </header>
 
@@ -102,7 +102,7 @@
     <div class="chat-container" id="chatContainer">
         <div class="d-flex ai-message message-bubble align-items-start gap-2">
             <div>
-                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI. Zan iya amsa tambayoyinka, gudanar da bincike, kera maka hotuna kyauta, da kuma karanta amsoshi da murya. Me kake son mu gudanar yanzu?
+                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI, mai amfani da sabuwar fasahar Groq Llama 3.3. Zan iya amsa tambayoyinka, gudanar da bincike, kera maka hotuna kyauta da Flux Engine, ko karanta amsoshi da murya. Me kake son mu gudanar yanzu?
             </div>
         </div>
     </div>
@@ -116,7 +116,7 @@
                     <i class="bi bi-paperclip"></i>
                 </button>
 
-                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Amsa tambaya ko ka ce 'haɗa hoton...'" required>
+                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Amsa tambaya ko ka ce 'zana hoton...'" required>
 
                 <button type="submit" class="btn btn-custom" id="sendBtn">
                     <i class="bi bi-send-fill"></i>
@@ -177,26 +177,13 @@
             let fullText = '';
 
             try {
-                // Tura request tare da Headers idan ana bukatar hakan
-                const headers = {};
-                const token = localStorage.getItem('token');
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-
                 const response = await fetch(`${BASE_URL}/chat/stream`, {
                     method: 'POST',
-                    headers: headers,
                     body: formData
                 });
 
-                if (response.status === 401) {
-                    aiMsgDiv.innerHTML = '<span class="text-warning">⚠️ Backend yana buƙatar Login. Ana sauya koden kariya a Backend zuwa Guest Access...</span>';
-                    return;
-                }
-
                 if (!response.ok) {
-                    aiMsgDiv.innerHTML = `<span class="text-danger">⚠️ Kuskure daga Server: Code ${response.status}</span>`;
+                    aiMsgDiv.innerHTML = `<span class="text-danger">⚠️ Kuskure daga Server (Code ${response.status}). Tabbatar hanyar /chat/stream tana nan a backend.</span>`;
                     return;
                 }
 
@@ -233,7 +220,7 @@
                 }
 
             } catch (err) {
-                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen sadarwa da backend. Tabbatar internet dinki yana aiki.</span>';
+                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen sadarwa da backend. Tabbatar internet ɗinki yana aiki.</span>';
             }
         }
 

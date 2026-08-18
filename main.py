@@ -10,21 +10,18 @@ from core.database import connect_to_mongo, close_mongo_connection
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Action lokacin Startup
     await connect_to_mongo()
     yield
-    # Action lokacin Shutdown
     await close_mongo_connection()
 
 
 app = FastAPI(
     title="Fata AI Ultra Core API",
-    description="Engine na Fata AI mai sarrafa Rubutu, Binciken Intanet, Kera Hotuna (Imagen 3), da Aika Muryar Sauti (Voice TTS).",
+    description="Engine na Fata AI mai sarrafa Rubutu, Binciken Intanet, Kera Hotuna (Imagen 3/Flux), da Aika Muryar Sauti (Voice TTS).",
     version="3.0.0",
     lifespan=lifespan
 )
 
-# 2. CORS MANAGEMENT
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,20 +30,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. ROUTERS
-app.include_router(chat.router, prefix="/api/v2")
+# AN CIRE PREFIX DOMIN YAYI DAIDE DA INDEX.HTML (/chat/stream)
+app.include_router(chat.router)
 
 
-# 4. HEALTH CHECK & FRONTEND
 @app.get("/api/health", tags=["Health Check"])
 async def health_check():
     return {
         "status": "Online",
         "system": "Fata AI Ultra Core Engine",
         "features": [
-            "Gemini Chat & AI Tutor", 
-            "Google Live Search", 
-            "Imagen 3 Generation", 
+            "Llama 3.3 Chat & AI Tutor", 
+            "Flux Image Generation", 
             "Voice Synthesis (TTS)"
         ],
         "year": "2026",
