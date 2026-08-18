@@ -2,7 +2,8 @@ import asyncio
 import json
 import os
 import re
-import base64
+import urllib.parse
+import random
 from io import BytesIO
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -15,7 +16,7 @@ from google.genai import types
 from core.database import get_chat_collection
 from core.security import get_current_user
 
-router = APIRouter(prefix="/chat", tags=["Fata AI Pure Gemini Engine"])
+router = APIRouter(prefix="/chat", tags=["Fata AI Engine"])
 
 # --- OFFICIAL GEMINI CLIENT SETUP ---
 def get_gemini_client():
@@ -49,13 +50,13 @@ def is_image_request(text: str) -> bool:
 
 
 # ==========================================
-# 1. PURE GEMINI CHAT & NATIVE IMAGEN 3
+# 1. UNIFIED STREAM CHAT & FLUX IMAGE ENGINE
 # ==========================================
 @router.post("/stream")
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("gemini-3.6-flash"),
+    model: Optional[str] = Form("gemini-1.5-flash"),
     file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user)
 ):
@@ -66,12 +67,11 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
-    # SYSTEM PROMPT FOR UNIVERSAL MULTILINGUAL & CURRENT CONTEXT
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
         "YOU ARE FATA AI: An advanced AI collaborator powered strictly by Google Gemini technology.\n"
         "1. MULTILINGUAL SUPPORT: You support all global languages (Hausa, English, Arabic, French, Spanish, etc.) natively. Always respond in the exact same language used by the user.\n"
-        "2. ACCURACY & CONTEXT: The 2025/2026 UEFA Champions League final took place in mid-2026 in Budapest, Hungary, where Paris Saint-Germain (PSG) defeated Arsenal on penalties.\n"
+        "2. ACCURACY & CONTEXT: Provide precise and up-to-date answers.\n"
         "3. TONE: Be direct, smart, highly accurate, and concise. Avoid unnecessary preambles or repeating greetings."
     )
 
@@ -80,48 +80,48 @@ async def stream_chat(
         client = get_gemini_client()
 
         if not client:
-            msg = "⚠️ API Key bata inganta ba. Tabbatar ka saka ainihin API Key daga Google AI Studio."
+            msg = "⚠️ API Key bata inganta ba. Tabbatar ka saka GEMINI_API_KEY a muhallin (environment) dinka."
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
-        # --- A. NATIVE GOOGLE IMAGEN 3 GENERATION ---
+        # --- A. FLUX IMAGE GENERATION (100% FREE & UNLIMITED) ---
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Google Imagen 3...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Flux Engine...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                def generate_imagen():
-                    return client.models.generate_images(
-                        model='imagen-3.0-generate-002',
-                        prompt=user_query,
-                        config=types.GenerateImagesConfig(
-                            number_of_images=1,
-                            output_mime_type="image/jpeg",
-                            aspect_ratio="1:1"
-                        )
+                # Fassara da inganta prompt zuwa Turanci ta hanyar Gemini
+                def enhance_prompt():
+                    enhancer = f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."
+                    res = client.models.generate_content(
+                        model="gemini-1.5-flash",
+                        contents=enhancer
                     )
+                    return res.text.strip() if res.text else user_query
 
-                result = await asyncio.to_thread(generate_imagen)
+                english_prompt = await asyncio.to_thread(enhance_prompt)
+                encoded_prompt = urllib.parse.quote(english_prompt)
+                seed = random.randint(1, 999999)
+                
+                # Flux Engine URL
+                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&seed={seed}&nologo=true"
 
-                if result.generated_images:
-                    for generated_image in result.generated_images:
-                        b64_img = base64.b64encode(generated_image.image.image_bytes).decode('utf-8')
-                        image_markdown = f"![{user_query}](data:image/jpeg;base64,{b64_img})\n\nGa hoton da na kera maka da Google Imagen 3 Engine!"
-                        
-                        full_assistant_response = image_markdown
-                        yield f"data: {json.dumps({'content': image_markdown})}\n\n"
-                        yield "data: [DONE]\n\n"
-                        return
+                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da na kera maka da Flux Engine!"
+                full_assistant_response = image_markdown
+                
+                yield f"data: {json.dumps({'content': image_markdown})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
             except Exception as e:
-                msg = f"⚠️ Kuskuren Imagen 3: {str(e)}\n*Tabbatar ka haɗa Billing Account dinka a Google AI Studio.*"
+                msg = f"⚠️ Kuskuren kera hoto: {str(e)}"
                 yield f"data: {json.dumps({'content': msg})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. MULTI-LINGUAL CHAT & GOOGLE SEARCH GROUNDING ---
-        target_model = model.strip() if model else "gemini-3.6-flash"
+        # --- B. CHAT STREAMING WITH GEMINI 1.5 FLASH ---
+        target_model = "gemini-1.5-flash"
 
         contents = []
         if file:
@@ -137,7 +137,7 @@ async def stream_chat(
                 config = types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.7,
-                    tools=[{"google_search": {}}]  # Full native search tool
+                    tools=[{"google_search": {}}]
                 )
                 return client.models.generate_content_stream(
                     model=target_model,
@@ -155,6 +155,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
+            # Adana Hira a Database
             chat_collection = get_chat_collection()
             if chat_collection is not None:
                 new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
@@ -179,7 +180,7 @@ async def stream_chat(
 
 
 # ==========================================
-# 2. HANYAR SAUTI DA MURYA (VOICE TTS)
+# 2. VOICE TTS ENGINE
 # ==========================================
 @router.post("/text-to-speech", tags=["Fata AI Voice Engine"])
 async def text_to_speech(

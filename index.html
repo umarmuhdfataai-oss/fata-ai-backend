@@ -6,7 +6,6 @@
     <title>Fata AI - Injin Basira da Ilimi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <!-- MarkedJS don fassara Markdown da nuna hotuna da ke ciki -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
@@ -80,8 +79,8 @@
         }
 
         audio {
-            height: 30px;
-            margin-top: 8px;
+            height: 35px;
+            margin-top: 10px;
             width: 100%;
         }
     </style>
@@ -95,7 +94,7 @@
             <h4 class="m-0 fw-bold">Fata AI <span class="badge bg-primary fs-6">Ultra 2026</span></h4>
         </div>
         <div>
-            <span class="badge bg-success p-2"><i class="bi bi-stars"></i> Yanayin All-in-One</span>
+            <span class="badge bg-success p-2"><i class="bi bi-stars"></i> Injin Flux + Gemini</span>
         </div>
     </header>
 
@@ -103,7 +102,7 @@
     <div class="chat-container" id="chatContainer">
         <div class="d-flex ai-message message-bubble align-items-start gap-2">
             <div>
-                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI. Zan iya amsa tambayoyinka, gudanar da bincike a Google, kera maka hotuna, da kuma karanta amsoshi da murya a wuri guda. Me kake son mu gudanar yanzu?
+                <strong>Fata AI:</strong> Sannu! Ni ce Fata AI. Zan iya amsa tambayoyinka, gudanar da bincike, kera maka hotuna kyauta, da kuma karanta amsoshi da murya. Me kake son mu gudanar yanzu?
             </div>
         </div>
     </div>
@@ -117,13 +116,13 @@
                     <i class="bi bi-paperclip"></i>
                 </button>
 
-                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Amsa tambaya, nemi bincike, ko ka ce 'haɗa hoton...'" required>
+                <input type="text" id="userInput" class="form-control bg-dark text-white border-secondary" placeholder="Amsa tambaya ko ka ce 'haɗa hoton...'" required>
 
                 <button type="submit" class="btn btn-custom" id="sendBtn">
                     <i class="bi bi-send-fill"></i>
                 </button>
             </div>
-            <small id="fileLabel" class="text-info mt-1 d-block" style="display: none !important;"></small>
+            <small id="fileLabel" class="text-info mt-1" style="display: none;"></small>
         </form>
     </div>
 
@@ -137,7 +136,7 @@
             if (fileInput.files.length > 0) {
                 selectedFile = fileInput.files[0];
                 fileLabel.innerText = "An zaɓi fayil: " + selectedFile.name;
-                fileLabel.style.setProperty('display', 'block', 'important');
+                fileLabel.style.display = 'block';
             }
         }
 
@@ -147,17 +146,14 @@
             const message = inputField.value.trim();
             if (!message && !selectedFile) return;
 
-            // Nuna saƙon mai amfani
             appendMessage(message || (selectedFile ? selectedFile.name : ''), 'user');
             inputField.value = '';
 
-            // Aika buƙata zuwa guda ɗaya kawai
             await streamChat(message);
 
-            // Wanke fayil ɗin da aka zaɓa
             selectedFile = null;
             document.getElementById('fileInput').value = '';
-            document.getElementById('fileLabel').style.setProperty('display', 'none', 'important');
+            document.getElementById('fileLabel').style.display = 'none';
         }
 
         function appendMessage(content, sender) {
@@ -170,7 +166,6 @@
             return msgDiv;
         }
 
-        // HIRA DA KERA HOTO A WURI GUDA (UNIFIED STREAM)
         async function streamChat(message) {
             const formData = new FormData();
             formData.append('message', message);
@@ -182,7 +177,8 @@
             let fullText = '';
 
             try {
-                const response = await fetch(`${BASE_URL}/api/v2/chat/stream`, {
+                // Gyararren Route URL zuwa Backend
+                const response = await fetch(`${BASE_URL}/chat/stream`, {
                     method: 'POST',
                     body: formData
                 });
@@ -225,14 +221,13 @@
             }
         }
 
-        // SAURARON SAUTI DA MURYA (VOICE TTS)
         async function addVoicePlayer(container, text) {
             const formData = new FormData();
             formData.append('text', text.substring(0, 300));
             formData.append('lang', 'ha');
 
             try {
-                const res = await fetch(`${BASE_URL}/api/v2/chat/text-to-speech`, {
+                const res = await fetch(`${BASE_URL}/chat/text-to-speech`, {
                     method: 'POST',
                     body: formData
                 });
