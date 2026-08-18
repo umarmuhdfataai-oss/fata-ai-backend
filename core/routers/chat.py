@@ -48,7 +48,7 @@ def is_image_request(text: str) -> bool:
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("llama-3.3-70b-versatile"),
+    model: Optional[str] = Form("llama3-70b-8192"),
     file: Optional[UploadFile] = File(None)
 ):
     if not message and not file:
@@ -60,7 +60,7 @@ async def stream_chat(
 
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
-        "YOU ARE FATA AI: An ultra-fast, highly accurate AI assistant powered by Groq and Meta Llama 3.3 architecture.\n"
+        "YOU ARE FATA AI: An ultra-fast, highly accurate AI assistant powered by Groq architecture.\n"
         "1. MULTILINGUAL SUPPORT: You support all global languages (Hausa, English, Arabic, French, Spanish, etc.) natively. Always respond in the exact same language used by the user.\n"
         "2. ACCURACY & CONTEXT: Provide precise, direct, and intelligent answers.\n"
         "3. TONE: Be direct, smart, clean, and concise. Avoid unnecessary preambles or repeating greetings."
@@ -83,7 +83,7 @@ async def stream_chat(
                 await asyncio.sleep(0.1)
 
                 res = await client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="llama3-70b-8192",
                     messages=[
                         {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
                     ]
@@ -107,7 +107,7 @@ async def stream_chat(
                 return
 
         # CHAT STREAMING WITH GROQ
-        target_model = model or "llama-3.3-70b-versatile"
+        target_model = model or "llama3-70b-8192"
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
