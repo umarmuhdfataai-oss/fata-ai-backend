@@ -177,11 +177,28 @@
             let fullText = '';
 
             try {
-                // Gyararren Route URL zuwa Backend
+                // Tura request tare da Headers idan ana bukatar hakan
+                const headers = {};
+                const token = localStorage.getItem('token');
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
                 const response = await fetch(`${BASE_URL}/chat/stream`, {
                     method: 'POST',
+                    headers: headers,
                     body: formData
                 });
+
+                if (response.status === 401) {
+                    aiMsgDiv.innerHTML = '<span class="text-warning">⚠️ Backend yana buƙatar Login. Ana sauya koden kariya a Backend zuwa Guest Access...</span>';
+                    return;
+                }
+
+                if (!response.ok) {
+                    aiMsgDiv.innerHTML = `<span class="text-danger">⚠️ Kuskure daga Server: Code ${response.status}</span>`;
+                    return;
+                }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
@@ -211,13 +228,12 @@
                     }
                 }
 
-                // Kara muryar sauti (TTS) idan ba hoton guda daya kacal aka turo ba
                 if (fullText && !fullText.includes("![") && !fullText.includes("data:image")) {
                     addVoicePlayer(aiMsgDiv, fullText);
                 }
 
             } catch (err) {
-                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen sadarwa da backend.</span>';
+                aiMsgDiv.innerHTML = '<span class="text-danger">⚠️ Kuskure wajen sadarwa da backend. Tabbatar internet dinki yana aiki.</span>';
             }
         }
 

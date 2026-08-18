@@ -6,24 +6,21 @@ import urllib.parse
 import random
 from io import BytesIO
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from gtts import gTTS
-
-from google import genai
-from google.genai import types
+from groq import Groq
 
 from core.database import get_chat_collection
-from core.security import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Fata AI Engine"])
 
-# --- OFFICIAL GEMINI CLIENT SETUP ---
-def get_gemini_client():
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+# --- OFFICIAL GROQ CLIENT SETUP ---
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
         return None
-    return genai.Client(api_key=api_key)
+    return Groq(api_key=api_key)
 
 
 def is_image_request(text: str) -> bool:
@@ -50,64 +47,62 @@ def is_image_request(text: str) -> bool:
 
 
 # ==========================================
-# 1. UNIFIED STREAM CHAT & FLUX IMAGE ENGINE
+# 1. UNIFIED STREAM CHAT & FLUX IMAGE ENGINE (GROQ)
 # ==========================================
 @router.post("/stream")
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("gemini-3.6-flash"),
-    file: Optional[UploadFile] = File(None),
-    current_user: dict = Depends(get_current_user)
+    model: Optional[str] = Form("llama-3.3-70b-versatile"),
+    file: Optional[UploadFile] = File(None)
 ):
     if not message and not file:
         raise HTTPException(status_code=400, detail="Muna buƙatar saƙo ko fayil.")
 
-    user_email = current_user.get("sub", "guest_user")
+    user_email = "guest_user"
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
-        "YOU ARE FATA AI: An advanced AI collaborator powered strictly by Google Gemini technology.\n"
+        "YOU ARE FATA AI: An ultra-fast, highly accurate AI assistant powered by Groq and Meta Llama 3.3 architecture.\n"
         "1. MULTILINGUAL SUPPORT: You support all global languages (Hausa, English, Arabic, French, Spanish, etc.) natively. Always respond in the exact same language used by the user.\n"
-        "2. ACCURACY & CONTEXT: Provide precise and up-to-date answers.\n"
-        "3. TONE: Be direct, smart, highly accurate, and concise. Avoid unnecessary preambles or repeating greetings."
+        "2. ACCURACY & CONTEXT: Provide precise, direct, and intelligent answers.\n"
+        "3. TONE: Be direct, smart, clean, and concise. Avoid unnecessary preambles or repeating greetings."
     )
 
     async def event_generator():
         full_assistant_response = ""
-        client = get_gemini_client()
+        client = get_groq_client()
 
         if not client:
-            msg = "⚠️ API Key bata inganta ba. Tabbatar ka saka GEMINI_API_KEY a muhallin (environment) dinka."
+            msg = "⚠️ API Key bata inganta ba. Tabbatar ka saka GROQ_API_KEY a Render environment variables."
             yield f"data: {json.dumps({'content': msg})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
-        # --- A. FLUX IMAGE GENERATION (100% FREE & UNLIMITED) ---
+        # --- A. FLUX IMAGE GENERATION ---
         if is_image_request(user_query) and not file:
             try:
                 yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Flux Engine...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Fassara da inganta prompt zuwa Turanci ta hanyar Gemini 3.6 Flash
                 def enhance_prompt():
-                    enhancer = f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."
-                    res = client.models.generate_content(
-                        model="gemini-3.6-flash",
-                        contents=enhancer
+                    res = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
+                        ]
                     )
-                    return res.text.strip() if res.text else user_query
+                    return res.choices[0].message.content.strip() if res.choices else user_query
 
                 english_prompt = await asyncio.to_thread(enhance_prompt)
                 encoded_prompt = urllib.parse.quote(english_prompt)
                 seed = random.randint(1, 999999)
                 
-                # Flux Engine URL
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&seed={seed}&nologo=true"
 
-                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da na kera maka da Flux Engine!"
+                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da na kera maka!"
                 full_assistant_response = image_markdown
                 
                 yield f"data: {json.dumps({'content': image_markdown})}\n\n"
@@ -120,56 +115,51 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # --- B. CHAT STREAMING WITH GEMINI 3.6 FLASH ---
-        target_model = "gemini-3.6-flash"
+        # --- B. CHAT STREAMING WITH GROQ (LLAMA 3.3 70B) ---
+        target_model = "llama-3.3-70b-versatile"
 
-        contents = []
-        if file:
-            file_bytes = await file.read()
-            mime_type = file.content_type or "image/jpeg"
-            contents.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
-
+        messages = [{"role": "system", "content": system_prompt}]
         if user_query:
-            contents.append(user_query)
+            messages.append({"role": "user", "content": user_query})
 
         try:
-            def fetch_gemini_stream():
-                config = types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.7,
-                    tools=[{"google_search": {}}]
-                )
-                return client.models.generate_content_stream(
+            def fetch_groq_stream():
+                return client.chat.completions.create(
                     model=target_model,
-                    contents=contents,
-                    config=config
+                    messages=messages,
+                    temperature=0.7,
+                    stream=True
                 )
 
-            response_stream = await asyncio.to_thread(fetch_gemini_stream)
+            response_stream = await asyncio.to_thread(fetch_groq_stream)
 
             for chunk in response_stream:
-                if chunk.text:
-                    full_assistant_response += chunk.text
-                    yield f"data: {json.dumps({'content': chunk.text})}\n\n"
+                if chunk.choices and chunk.choices[0].delta.content:
+                    text_chunk = chunk.choices[0].delta.content
+                    full_assistant_response += text_chunk
+                    yield f"data: {json.dumps({'content': text_chunk})}\n\n"
                     await asyncio.sleep(0.01)
 
             yield "data: [DONE]\n\n"
 
-            # Adana Hira a Database
-            chat_collection = get_chat_collection()
-            if chat_collection is not None:
-                new_user_msg = {"role": "user", "content": user_query or "[Fayil/Hoto]"}
-                new_ai_msg = {"role": "assistant", "content": full_assistant_response}
-                asyncio.create_task(
-                    chat_collection.update_one(
-                        {"_id": session_id},
-                        {
-                            "$set": {"user_email": user_email},
-                            "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
-                        },
-                        upsert=True
+            # Adana Hira a Database (Idan akwai)
+            try:
+                chat_collection = get_chat_collection()
+                if chat_collection is not None:
+                    new_user_msg = {"role": "user", "content": user_query or "[Fayil]"}
+                    new_ai_msg = {"role": "assistant", "content": full_assistant_response}
+                    asyncio.create_task(
+                        chat_collection.update_one(
+                            {"_id": session_id},
+                            {
+                                "$set": {"user_email": user_email},
+                                "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}
+                            },
+                            upsert=True
+                        )
                     )
-                )
+            except Exception:
+                pass
 
         except Exception as stream_err:
             msg = f"⚠️ Tsaiko a saƙo: {str(stream_err)}"
