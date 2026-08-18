@@ -48,7 +48,7 @@ def is_image_request(text: str) -> bool:
 async def stream_chat(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
-    model: Optional[str] = Form("llama3-70b-8192"),
+    model: Optional[str] = Form("llama-3.1-8b-instant"),
     file: Optional[UploadFile] = File(None)
 ):
     if not message and not file:
@@ -83,7 +83,7 @@ async def stream_chat(
                 await asyncio.sleep(0.1)
 
                 res = await client.chat.completions.create(
-                    model="llama3-70b-8192",
+                    model="llama-3.1-8b-instant",
                     messages=[
                         {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
                     ]
@@ -107,7 +107,7 @@ async def stream_chat(
                 return
 
         # CHAT STREAMING WITH GROQ
-        target_model = model or "llama3-70b-8192"
+        target_model = model or "llama-3.1-8b-instant"
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
