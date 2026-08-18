@@ -15,8 +15,8 @@ from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
-# Active model dynamically selected from Playground
-DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
+# World-class high-intelligence model
+DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
 
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -61,12 +61,13 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
+    # ADVANCED SYSTEM PROMPT
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
-        "YOU ARE FATA AI: An ultra-fast, highly accurate AI assistant powered by Groq architecture.\n"
-        "1. MULTILINGUAL SUPPORT: You support all global languages (Hausa, English, Arabic, French, Spanish, etc.) natively. Always respond in the exact same language used by the user.\n"
-        "2. ACCURACY & CONTEXT: Provide precise, direct, and intelligent answers.\n"
-        "3. TONE: Be direct, smart, clean, and concise. Avoid unnecessary preambles or repeating greetings."
+        "YOU ARE FATA AI: A world-class, ultra-intelligent, multi-lingual AI assistant powered by Groq architecture.\n"
+        "1. HIGH INTELLECT & ACCURACY: Provide deep, exceptionally accurate, well-structured, and highly logical answers across all subjects (science, technology, programming, history, logic, and culture).\n"
+        "2. GLOBAL MULTILINGUAL MASTERY: You natively understand and communicate in every language on Earth perfectly (Hausa, English, Arabic, French, Fulani, Yoruba, Igbo, Spanish, Mandarin, etc.). ALWAYS respond in the exact same language used by the user.\n"
+        "3. TONE & STYLE: Speak like an empathetic expert—polite, sharp, natural, clear, highly encouraging, and engaging. Avoid robotic filler responses."
     )
 
     async def event_generator():
@@ -120,7 +121,7 @@ async def stream_chat(
             response_stream = await client.chat.completions.create(
                 model=target_model,
                 messages=messages,
-                temperature=1,
+                temperature=0.6,
                 stream=True
             )
 
