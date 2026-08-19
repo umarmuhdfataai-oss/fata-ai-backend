@@ -10,12 +10,13 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from gtts import gTTS
 from groq import AsyncGroq
+from duckduckgo_search import DDGS
 
 from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
-# Yi amfani da Model din da ke aiki radau a shafinka na Groq Cloud
+# Model ɗin da ke aiki a tsarin Groq Cloud dinka
 DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
 
 def get_groq_client() -> Optional[AsyncGroq]:
@@ -23,6 +24,24 @@ def get_groq_client() -> Optional[AsyncGroq]:
     if not api_key:
         return None
     return AsyncGroq(api_key=api_key)
+
+
+def perform_web_search(query: str, max_results: int = 3) -> str:
+    """Yin bincike a yanar gizo ta hanyar DuckDuckGo don nemo sabbin bayanai."""
+    try:
+        results = DDGS().text(query, max_results=max_results)
+        if not results:
+            return ""
+        
+        search_snippets = []
+        for r in results:
+            title = r.get("title", "")
+            body = r.get("body", "")
+            search_snippets.append(f"• {title}: {body}")
+            
+        return "\n".join(search_snippets)
+    except Exception:
+        return ""
 
 
 def is_image_request(text: str) -> bool:
@@ -61,16 +80,6 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
-    # SYSTEM PROMPT BARE-BONES & HIGH-PERFORMANCE
-    system_prompt = (
-        "CURRENT YEAR: 2026.\n\n"
-        "YOU ARE FATA AI: The most intelligent, friendly, and highly capable AI assistant on Earth.\n\n"
-        "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and clear reasoning.\n"
-        "2. PERFECT MULTILINGUAL NATIVE SPEAKER: Understand and respond natively in the exact language the user used (Hausa, English, etc.).\n"
-        "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and natural.\n"
-        "4. NO THINKING PROCESS: Do NOT display internal thought processes, reasoning tags, or <think> blocks. Provide ONLY the final answer."
-    )
-
     async def event_generator():
         full_assistant_response = ""
         client = get_groq_client()
@@ -83,14 +92,14 @@ async def stream_chat(
 
         target_model = model.strip() if model else DEFAULT_GROQ_MODEL
 
-        # FLUX IMAGE GENERATION WITH PROMPT ENHANCEMENT
+        # FLUX IMAGE GENERATION
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina amfani da kaifin Flux Engine wajen zana hoton da ya fi kowane hoto kyau...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina amfani da kaifin Flux Engine wajen zana hoton...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
                 enhancement_prompt = (
-                    f"Transform this simple user image request into an ultra-detailed, highly vivid, 8K resolution, cinematic English prompt for Flux image generator. "
+                    f"Transform this simple user image request into an ultra-detailed, highly vivid English prompt for Flux image generator. "
                     f"Return ONLY the enhanced prompt string without explanations: '{user_query}'"
                 )
 
@@ -105,7 +114,7 @@ async def stream_chat(
                 seed = random.randint(1, 999999)
                 
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&seed={seed}&nologo=true"
-                image_markdown = f"![{user_query}]({image_url})\n\n✨ **Ga gwanintar hoton da na kera maka da duk wata kwarewa!**"
+                image_markdown = f"![{user_query}]({image_url})\n\n✨ **Ga gwanintar hoton da na kera maka!**"
                 
                 yield f"data: {json.dumps({'content': image_markdown})}\n\n"
                 yield "data: [DONE]\n\n"
@@ -117,7 +126,24 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # STREAMING WITH STRICT THINKING FILTER
+        # WEB SEARCH INTEGRATION (Nemo sabbin bayanai daga yanar gizo)
+        search_context = ""
+        if user_query:
+            # Gudanar da bincike a yanar gizo ta hanyar Thread Pool
+            search_results = await asyncio.to_thread(perform_web_search, user_query)
+            if search_results:
+                search_context = f"\n\nLIVE WEB SEARCH RESULTS (Use this to provide accurate current information):\n{search_results}"
+
+        system_prompt = (
+            "CURRENT YEAR: 2026.\n\n"
+            "YOU ARE FATA AI: The most intelligent, friendly, and highly capable AI assistant on Earth.\n\n"
+            "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and clear reasoning. Use provided Live Web Search results for real-time information.\n"
+            "2. PERFECT MULTILINGUAL NATIVE SPEAKER: Understand and respond natively in the exact language the user used (Hausa, English, etc.).\n"
+            "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and natural.\n"
+            "4. NO THINKING PROCESS: Do NOT display internal thought processes, reasoning tags, or <think> blocks. Provide ONLY the final answer."
+            f"{search_context}"
+        )
+
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
@@ -136,7 +162,6 @@ async def stream_chat(
                 if chunk.choices and chunk.choices[0].delta.content:
                     text_chunk = chunk.choices[0].delta.content
 
-                    # Cire tunanin ciki idan samfurin na aiko da tag din <think>
                     if "<think>" in text_chunk:
                         is_thinking = True
                         continue
@@ -150,7 +175,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Ajiye zuwa Database
+            # Database Update
             try:
                 chat_collection = get_chat_collection()
                 if chat_collection is not None:
