@@ -35,22 +35,39 @@ def get_groq_client() -> Optional[AsyncGroq]:
     return AsyncGroq(api_key=api_key)
 
 
-def perform_global_search(query: str, max_results: int = 5) -> str:
+def perform_global_search(query: str, max_results: int = 6) -> str:
+    """Ingantaccen bincike mai kariya daga cikas din Render/Cloud network"""
     try:
-        results = DDGS().text(query, max_results=max_results)
+        ddg = DDGS()
+        results = list(ddg.text(query, max_results=max_results))
         if not results:
             return ""
         
         search_snippets = []
         for r in results:
-            title = r.get("title", "")
-            body = r.get("body", "")
-            search_snippets.append(f"• {title}: {body}")
+            title = r.get("title", "").strip()
+            body = r.get("body", "").strip()
+            if title and body:
+                search_snippets.append(f"• Source [{title}]: {body}")
             
         return "\n".join(search_snippets)
     except Exception as e:
-        print(f"Search Error: {e}")
+        print(f"Live Search Error: {e}")
         return ""
+
+
+def should_force_search(query: str) -> bool:
+    """Yana gano tambayoyin da ke buƙatar binciken Intanet nan take (Sports, News, Dates)"""
+    if not query:
+        return False
+    
+    keywords = [
+        "bana", "yanzu", "shekarar nan", "wace kungiya", "waye ya lashe", "who won",
+        "champions league", "premier league", "sarkin", "sarki", "gwamnan", "shugaban",
+        "2024", "2025", "2026", "match", "score", "labarun", "labari", "latest", "news"
+    ]
+    query_lower = query.lower()
+    return any(word in query_lower for word in keywords)
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
@@ -227,19 +244,20 @@ async def stream_chat(
         except Exception as history_err:
             print(f"Memory Fetch Error: {history_err}")
 
-        # 6. REAL-TIME SEARCH (AN INGANTA SHI DOMIN INGANTA MASARAUTU DA GARURUWAN HAUSA)
+        # 6. FORCE LIVE SEARCH FOR TEMPORAL / SPORTS / NEWS QUERIES
         search_context = ""
-        if user_query and not file and len(user_query) > 2:
+        needs_search = should_force_search(user_query) or (user_query and not file and len(user_query) > 3)
+
+        if needs_search:
             try:
                 search_query_res = await client.chat.completions.create(
                     model=target_model,
                     messages=[{
                         "role": "user", 
                         "content": (
-                            "Convert this user query into an effective web search term. "
-                            "If it mentions Hausa traditional titles or Nigerian places (e.g., 'Sarkin Jama'are', 'Emir of Katagum'), "
-                            "keep the exact proper names and add relevant location context like 'Emirate Bauchi Nigeria' so search engines find real entities. "
-                            f"Query: '{user_query}'"
+                            "Convert this query into a highly precise English search term for news/sports/facts. "
+                            "If it's about Champions League, traditional rulers, or live events, ensure keywords include exact years/names. "
+                            f"User Query: '{user_query}'"
                         )
                     }],
                     temperature=0.1
@@ -248,20 +266,19 @@ async def stream_chat(
 
                 search_results = await asyncio.to_thread(perform_global_search, optimized_query)
                 if search_results:
-                    search_context = f"\n\nREAL-TIME LIVE SEARCH DATA:\n{search_results}"
+                    search_context = f"\n\nLIVE REAL-TIME SEARCH DATA (CURRENT YEAR 2026):\n{search_results}"
             except Exception as search_err:
-                print(f"Search error: {search_err}")
+                print(f"Search trigger error: {search_err}")
 
-        # SYSTEM PROMPT (AN GYARA ANININ HOBAƊA DOMIN AI YA GANE AMBIUITY)
+        # SYSTEM PROMPT (RIGID TEMPORAL GROUNDING)
         system_prompt = (
             "CURRENT YEAR: 2026.\n\n"
             "YOU ARE FATA AI: The supreme, ultra-intelligent, highly empathetic, and globally versatile AI system.\n\n"
-            "GLOBAL CAPABILITIES & INSTRUCTIONS:\n"
-            "1. UNIVERSAL NATIVE SPEAKER: Speak native Hausa, English, Arabic, French, and all languages accurately.\n"
-            "2. DIRECT FACTUAL ANSWERS FIRST: When answering questions in Hausa regarding leadership, titles, or locations (e.g., 'Sarkin Jama'are', 'Emir of Katagum'), always prioritize factual answers about real traditional rulers, emirates, or historical figures in Nigeria first. Do NOT treat them as metaphorical or poetic expressions unless explicitly asked.\n"
-            "3. CODE INTERPRETER & PDF VISION: Process code execution, audio, images, and full PDF files.\n"
-            "4. REAL-TIME FACTUAL PRECISION: Rely on REAL-TIME LIVE SEARCH DATA for latest factual context.\n"
-            "5. NO INTERNAL THINKING OUTPUT: Do NOT output <think> tags or reasoning steps."
+            "STRICT TRUTH & TEMPORAL GROUNDING RULES:\n"
+            "1. NO TEMPORAL HALLUCINATIONS: Do NOT mix up past sports results with future dates. Real Madrid defeated Borussia Dortmund 2-0 in the UEFA Champions League Final on June 1, 2024. Do NOT say this match occurred or will occur in 2025 or 2026.\n"
+            "2. LIVE SEARCH DEPENDENCY: Rely strictly on the LIVE REAL-TIME SEARCH DATA provided for modern events, football winners, news, and current leaders.\n"
+            "3. ACCURATE HAUSA TRANSLATION: Translate facts naturally into Hausa. Answer direct questions directly without unnecessary ambiguity.\n"
+            "4. NO INTERNAL THINKING OUTPUT: Do NOT output <think> tags or reasoning steps."
             f"{pdf_text_context}"
             f"{search_context}"
         )
@@ -276,7 +293,7 @@ async def stream_chat(
             response_stream = await client.chat.completions.create(
                 model=target_model,
                 messages=messages,
-                temperature=0.3,  # An rage shi daga 0.6 zuwa 0.3 domin ya ba da amsar gaskiya (factual) ba ta ƙagawa ba
+                temperature=0.2,  # Precision control against hallucinations
                 stream=True
             )
 
