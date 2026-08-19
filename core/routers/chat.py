@@ -15,7 +15,7 @@ from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
-# World-class High-Performance Groq Model
+# Sunan model mai inganci a Groq
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 def get_groq_client() -> Optional[AsyncGroq]:
@@ -65,10 +65,10 @@ async def stream_chat(
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
         "YOU ARE FATA AI: The most intelligent, friendly, and highly capable AI assistant on Earth, built to provide world-class responses.\n\n"
-        "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and flawless logical reasoning. Provide clear, structured, and helpful answers for code, science, history, business, and everyday conversations.\n"
+        "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and flawless logical reasoning. Provide clear, structured, and helpful answers.\n"
         "2. PERFECT MULTILINGUAL NATIVE SPEAKER: You effortlessly understand and naturally speak every global language (Hausa, English, Arabic, French, Fulani, Yoruba, Igbo, Spanish, etc.). ALWAYS respond in the exact language the user used.\n"
-        "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and helpful. Speak naturally like a brilliant human friend or expert mentor.\n"
-        "4. NO THINKING PROCESS OUTPUT: Provide ONLY your final refined response. Never output internal reasoning or thinking steps."
+        "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and helpful. Speak naturally like a brilliant human friend.\n"
+        "4. NO THINKING PROCESS OUTPUT: Do NOT show any thinking steps, reasoning process, or chain of thought. Provide ONLY the final answer."
     )
 
     async def event_generator():
@@ -81,15 +81,14 @@ async def stream_chat(
             yield "data: [DONE]\n\n"
             return
 
-        target_model = DEFAULT_GROQ_MODEL
+        target_model = model.strip() if model else DEFAULT_GROQ_MODEL
 
-        # ADVANCED FLUX IMAGE GENERATION WITH PROMPT ENHANCEMENT
+        # FLUX IMAGE GENERATION WITH PROMPT ENHANCEMENT
         if is_image_request(user_query) and not file:
             try:
                 yield f"data: {json.dumps({'content': '🎨 *Ina amfani da kaifin Flux Engine wajen zana hoton da ya fi kowane hoto kyau...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
 
-                # Expand prompt for ultra high quality image generation
                 enhancement_prompt = (
                     f"Transform this simple user image request into an ultra-detailed, highly vivid, 8K resolution, cinematic English prompt for Flux image generator. "
                     f"Include lighting, mood, camera style, and photorealistic details. Return ONLY the enhanced prompt string without explanations: '{user_query}'"
@@ -118,7 +117,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # HIGH-INTELLIGENCE CHAT STREAMING
+        # STREAMING WITH THINKING FILTER
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
@@ -131,15 +130,28 @@ async def stream_chat(
                 stream=True
             )
 
+            is_thinking = False
+            thinking_buffer = ""
+
             async for chunk in response_stream:
                 if chunk.choices and chunk.choices[0].delta.content:
                     text_chunk = chunk.choices[0].delta.content
-                    full_assistant_response += text_chunk
-                    yield f"data: {json.dumps({'content': text_chunk})}\n\n"
+
+                    # Filta don cire <think>...</think> idan model din yana aiko da su
+                    if "<think>" in text_chunk:
+                        is_thinking = True
+                        continue
+                    if "</think>" in text_chunk:
+                        is_thinking = False
+                        continue
+
+                    if not is_thinking:
+                        full_assistant_response += text_chunk
+                        yield f"data: {json.dumps({'content': text_chunk})}\n\n"
 
             yield "data: [DONE]\n\n"
 
-            # Save Chat to Database
+            # Database Update
             try:
                 chat_collection = get_chat_collection()
                 if chat_collection is not None:
