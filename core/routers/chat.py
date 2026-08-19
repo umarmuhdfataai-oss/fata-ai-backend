@@ -15,8 +15,8 @@ from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
-# World-class high-intelligence model
-DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
+# World-class High-Performance Groq Model
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -33,13 +33,13 @@ def is_image_request(text: str) -> bool:
 
     explicit_matches = [
         "zananmin", "zanamin", "zannanmin", "hadamin", "haɗamin", "keramin", "kēramin",
-        "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage"
+        "yimin", "zanaminhoto", "zananminhoto", "generateimage", "drawimage", "draw"
     ]
     if any(word in text_lower for word in explicit_matches):
         return True
 
     action_pattern = r'\b(zana|zāna|zannan|zanan|zanna|zayana|kera|kēra|hada|haɗa|yi|yimin|draw|drow|generate|create|make|paint|show)\b'
-    image_pattern = r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures|keyholder|design)\b'
+    image_pattern = r'\b(hoto|hoton|hotuna|image|images|photo|picture|pictures|keyholder|design|art|illustration)\b'
 
     has_action = bool(re.search(action_pattern, text_lower))
     has_image = bool(re.search(image_pattern, text_lower))
@@ -61,13 +61,14 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
-    # ADVANCED SYSTEM PROMPT
+    # ADVANCED WORLD-CLASS SYSTEM PROMPT
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
-        "YOU ARE FATA AI: A world-class, ultra-intelligent, multi-lingual AI assistant powered by Groq architecture.\n"
-        "1. HIGH INTELLECT & ACCURACY: Provide deep, exceptionally accurate, well-structured, and highly logical answers across all subjects (science, technology, programming, history, logic, and culture).\n"
-        "2. GLOBAL MULTILINGUAL MASTERY: You natively understand and communicate in every language on Earth perfectly (Hausa, English, Arabic, French, Fulani, Yoruba, Igbo, Spanish, Mandarin, etc.). ALWAYS respond in the exact same language used by the user.\n"
-        "3. TONE & STYLE: Speak like an empathetic expert—polite, sharp, natural, clear, highly encouraging, and engaging. Avoid robotic filler responses."
+        "YOU ARE FATA AI: The most intelligent, friendly, and highly capable AI assistant on Earth, built to provide world-class responses.\n\n"
+        "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and flawless logical reasoning. Provide clear, structured, and helpful answers for code, science, history, business, and everyday conversations.\n"
+        "2. PERFECT MULTILINGUAL NATIVE SPEAKER: You effortlessly understand and naturally speak every global language (Hausa, English, Arabic, French, Fulani, Yoruba, Igbo, Spanish, etc.). ALWAYS respond in the exact language the user used.\n"
+        "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and helpful. Speak naturally like a brilliant human friend or expert mentor.\n"
+        "4. NO THINKING PROCESS OUTPUT: Provide ONLY your final refined response. Never output internal reasoning or thinking steps."
     )
 
     async def event_generator():
@@ -82,17 +83,22 @@ async def stream_chat(
 
         target_model = DEFAULT_GROQ_MODEL
 
-        # FLUX IMAGE GENERATION
+        # ADVANCED FLUX IMAGE GENERATION WITH PROMPT ENHANCEMENT
         if is_image_request(user_query) and not file:
             try:
-                yield f"data: {json.dumps({'content': '🎨 *Ina kera maka hoton ta amfani da Flux Engine...*\n\n'})}\n\n"
+                yield f"data: {json.dumps({'content': '🎨 *Ina amfani da kaifin Flux Engine wajen zana hoton da ya fi kowane hoto kyau...*\n\n'})}\n\n"
                 await asyncio.sleep(0.1)
+
+                # Expand prompt for ultra high quality image generation
+                enhancement_prompt = (
+                    f"Transform this simple user image request into an ultra-detailed, highly vivid, 8K resolution, cinematic English prompt for Flux image generator. "
+                    f"Include lighting, mood, camera style, and photorealistic details. Return ONLY the enhanced prompt string without explanations: '{user_query}'"
+                )
 
                 res = await client.chat.completions.create(
                     model=target_model,
-                    messages=[
-                        {"role": "user", "content": f"Translate and enhance this image description into a detailed English prompt for an AI image generator: '{user_query}'. Return ONLY the refined English prompt."}
-                    ]
+                    messages=[{"role": "user", "content": enhancement_prompt}],
+                    temperature=0.7
                 )
                 english_prompt = res.choices[0].message.content.strip() if res.choices else user_query
 
@@ -100,7 +106,7 @@ async def stream_chat(
                 seed = random.randint(1, 999999)
                 
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&seed={seed}&nologo=true"
-                image_markdown = f"![{user_query}]({image_url})\n\nGa hoton da na kera maka!"
+                image_markdown = f"![{user_query}]({image_url})\n\n✨ **Ga gwanintar hoton da na kera maka da duk wata kwarewa!**"
                 
                 yield f"data: {json.dumps({'content': image_markdown})}\n\n"
                 yield "data: [DONE]\n\n"
@@ -112,7 +118,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # CHAT STREAMING WITH GROQ
+        # HIGH-INTELLIGENCE CHAT STREAMING
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
@@ -121,7 +127,7 @@ async def stream_chat(
             response_stream = await client.chat.completions.create(
                 model=target_model,
                 messages=messages,
-                temperature=0.6,
+                temperature=0.7,
                 stream=True
             )
 
@@ -133,7 +139,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Database Update
+            # Save Chat to Database
             try:
                 chat_collection = get_chat_collection()
                 if chat_collection is not None:
