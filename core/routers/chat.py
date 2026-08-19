@@ -15,8 +15,8 @@ from core.database import get_chat_collection
 
 router = APIRouter(tags=["Fata AI Engine"])
 
-# Sunan model mai inganci a Groq
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+# Yi amfani da Model din da ke aiki radau a shafinka na Groq Cloud
+DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
 
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -61,14 +61,14 @@ async def stream_chat(
     session_id = session_id if session_id else "default_session"
     user_query = message.strip() if message else ""
 
-    # ADVANCED WORLD-CLASS SYSTEM PROMPT
+    # SYSTEM PROMPT BARE-BONES & HIGH-PERFORMANCE
     system_prompt = (
         "CURRENT YEAR: 2026.\n\n"
-        "YOU ARE FATA AI: The most intelligent, friendly, and highly capable AI assistant on Earth, built to provide world-class responses.\n\n"
-        "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and flawless logical reasoning. Provide clear, structured, and helpful answers.\n"
-        "2. PERFECT MULTILINGUAL NATIVE SPEAKER: You effortlessly understand and naturally speak every global language (Hausa, English, Arabic, French, Fulani, Yoruba, Igbo, Spanish, etc.). ALWAYS respond in the exact language the user used.\n"
-        "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and helpful. Speak naturally like a brilliant human friend.\n"
-        "4. NO THINKING PROCESS OUTPUT: Do NOT show any thinking steps, reasoning process, or chain of thought. Provide ONLY the final answer."
+        "YOU ARE FATA AI: The most intelligent, friendly, and highly capable AI assistant on Earth.\n\n"
+        "1. INTELLIGENCE & ACCURACY: Respond with deep wisdom, precision, and clear reasoning.\n"
+        "2. PERFECT MULTILINGUAL NATIVE SPEAKER: Understand and respond natively in the exact language the user used (Hausa, English, etc.).\n"
+        "3. CONVERSATIONAL ELEGANCE: Be extremely engaging, warm, polite, and natural.\n"
+        "4. NO THINKING PROCESS: Do NOT display internal thought processes, reasoning tags, or <think> blocks. Provide ONLY the final answer."
     )
 
     async def event_generator():
@@ -91,7 +91,7 @@ async def stream_chat(
 
                 enhancement_prompt = (
                     f"Transform this simple user image request into an ultra-detailed, highly vivid, 8K resolution, cinematic English prompt for Flux image generator. "
-                    f"Include lighting, mood, camera style, and photorealistic details. Return ONLY the enhanced prompt string without explanations: '{user_query}'"
+                    f"Return ONLY the enhanced prompt string without explanations: '{user_query}'"
                 )
 
                 res = await client.chat.completions.create(
@@ -117,7 +117,7 @@ async def stream_chat(
                 yield "data: [DONE]\n\n"
                 return
 
-        # STREAMING WITH THINKING FILTER
+        # STREAMING WITH STRICT THINKING FILTER
         messages = [{"role": "system", "content": system_prompt}]
         if user_query:
             messages.append({"role": "user", "content": user_query})
@@ -131,13 +131,12 @@ async def stream_chat(
             )
 
             is_thinking = False
-            thinking_buffer = ""
 
             async for chunk in response_stream:
                 if chunk.choices and chunk.choices[0].delta.content:
                     text_chunk = chunk.choices[0].delta.content
 
-                    # Filta don cire <think>...</think> idan model din yana aiko da su
+                    # Cire tunanin ciki idan samfurin na aiko da tag din <think>
                     if "<think>" in text_chunk:
                         is_thinking = True
                         continue
@@ -151,7 +150,7 @@ async def stream_chat(
 
             yield "data: [DONE]\n\n"
 
-            # Database Update
+            # Ajiye zuwa Database
             try:
                 chat_collection = get_chat_collection()
                 if chat_collection is not None:
