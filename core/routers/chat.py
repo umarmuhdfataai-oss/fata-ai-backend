@@ -103,7 +103,7 @@ async def stream_chat(
     user_query = message.strip() if message else ""
 
     async def event_generator():
-        nonlocal user_query  # GYARA: An dawo da shi nan farkon aikin
+        nonlocal user_query
         full_assistant_response = ""
         client = get_groq_client()
 
@@ -227,7 +227,7 @@ async def stream_chat(
         except Exception as history_err:
             print(f"Memory Fetch Error: {history_err}")
 
-        # 6. REAL-TIME SEARCH
+        # 6. REAL-TIME SEARCH (AN INGANTA SHI DOMIN INGANTA MASARAUTU DA GARURUWAN HAUSA)
         search_context = ""
         if user_query and not file and len(user_query) > 2:
             try:
@@ -235,7 +235,12 @@ async def stream_chat(
                     model=target_model,
                     messages=[{
                         "role": "user", 
-                        "content": f"Optimize query for search engine. Output ONLY query string: '{user_query}'"
+                        "content": (
+                            "Convert this user query into an effective web search term. "
+                            "If it mentions Hausa traditional titles or Nigerian places (e.g., 'Sarkin Jama'are', 'Emir of Katagum'), "
+                            "keep the exact proper names and add relevant location context like 'Emirate Bauchi Nigeria' so search engines find real entities. "
+                            f"Query: '{user_query}'"
+                        )
                     }],
                     temperature=0.1
                 )
@@ -247,15 +252,16 @@ async def stream_chat(
             except Exception as search_err:
                 print(f"Search error: {search_err}")
 
-        # SYSTEM PROMPT
+        # SYSTEM PROMPT (AN GYARA ANININ HOBAƊA DOMIN AI YA GANE AMBIUITY)
         system_prompt = (
             "CURRENT YEAR: 2026.\n\n"
             "YOU ARE FATA AI: The supreme, ultra-intelligent, highly empathetic, and globally versatile AI system.\n\n"
             "GLOBAL CAPABILITIES & INSTRUCTIONS:\n"
             "1. UNIVERSAL NATIVE SPEAKER: Speak native Hausa, English, Arabic, French, and all languages accurately.\n"
-            "2. CODE INTERPRETER & PDF VISION: Process code execution, audio, images, and full PDF files.\n"
-            "3. REAL-TIME FACTUAL PRECISION: Rely on REAL-TIME LIVE SEARCH DATA for latest factual context.\n"
-            "4. NO INTERNAL THINKING OUTPUT: Do NOT output <think> tags or reasoning steps."
+            "2. DIRECT FACTUAL ANSWERS FIRST: When answering questions in Hausa regarding leadership, titles, or locations (e.g., 'Sarkin Jama'are', 'Emir of Katagum'), always prioritize factual answers about real traditional rulers, emirates, or historical figures in Nigeria first. Do NOT treat them as metaphorical or poetic expressions unless explicitly asked.\n"
+            "3. CODE INTERPRETER & PDF VISION: Process code execution, audio, images, and full PDF files.\n"
+            "4. REAL-TIME FACTUAL PRECISION: Rely on REAL-TIME LIVE SEARCH DATA for latest factual context.\n"
+            "5. NO INTERNAL THINKING OUTPUT: Do NOT output <think> tags or reasoning steps."
             f"{pdf_text_context}"
             f"{search_context}"
         )
@@ -270,7 +276,7 @@ async def stream_chat(
             response_stream = await client.chat.completions.create(
                 model=target_model,
                 messages=messages,
-                temperature=0.6,
+                temperature=0.3,  # An rage shi daga 0.6 zuwa 0.3 domin ya ba da amsar gaskiya (factual) ba ta ƙagawa ba
                 stream=True
             )
 
