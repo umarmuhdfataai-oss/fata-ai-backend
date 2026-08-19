@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
@@ -35,6 +36,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @router.post("/auth/register")
 async def register_user(user_data: UserRegister):
     db = get_db()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection failure."
+        )
+
     users_collection = db["users"]
 
     # Duba ko email yana nan a baya
@@ -50,18 +57,24 @@ async def register_user(user_data: UserRegister):
         "full_name": user_data.full_name,
         "email": user_data.email,
         "password": hashed_pwd,
-        "created_at": status.HTTP_200_OK
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
 
     await users_collection.insert_one(new_user)
     
     token = create_access_token({"sub": user_data.email})
-    return {"message": "Rajiya ta kammala cikin nasara!", "access_token": token, "token_type": "bearer"}
+    return {"message": "Rajista ta kammala cikin nasara!", "access_token": token, "token_type": "bearer"}
 
 
 @router.post("/auth/login", response_model=TokenResponse)
 async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
     db = get_db()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection failure."
+        )
+
     users_collection = db["users"]
 
     user = await users_collection.find_one({"email": form_data.username})

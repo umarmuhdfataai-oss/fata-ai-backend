@@ -36,6 +36,12 @@ def get_database():
     return db
 
 
+def get_db():
+    """Alias for get_database to maintain compatibility across routers."""
+    global db
+    return db
+
+
 def get_chat_collection():
     global chat_collection, db
     if chat_collection is not None:
