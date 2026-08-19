@@ -27,6 +27,7 @@ DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
 VISION_GROQ_MODEL = "llama-3.2-11b-vision-preview"
 WHISPER_GROQ_MODEL = "whisper-large-v3"
 
+
 def get_groq_client() -> Optional[AsyncGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
@@ -102,6 +103,7 @@ async def stream_chat(
     user_query = message.strip() if message else ""
 
     async def event_generator():
+        nonlocal user_query  # GYARA: An dawo da shi nan farkon aikin
         full_assistant_response = ""
         client = get_groq_client()
 
@@ -138,9 +140,8 @@ async def stream_chat(
                 
                 transcribed_text = transcription.text.strip()
                 if transcribed_text:
-                    nonlocal user_query
                     user_query = transcribed_text
-                    yield f"data: {json.dumps({'content': f'🗣️ **Muryarka:** *"{user_query}"*\n\n---\n\n'})}\n\n"
+                    yield f"data: {json.dumps({'content': f'🗣️ **Muryarka:** *\"{user_query}\"*\n\n---\n\n'})}\n\n"
             except Exception as voice_err:
                 msg = f"⚠️ Voice error: {str(voice_err)}"
                 yield f"data: {json.dumps({'content': msg})}\n\n"
