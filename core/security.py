@@ -1,43 +1,38 @@
 import os
-import datetime
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from typing import Optional
 from passlib.context import CryptContext
+import jwt
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "FATA_AI_ULTRA_SECURE_KEY_2026")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fata_ai_super_secret_key_change_in_production")
 ALGORITHM = "HS256"
-CryptContextRef = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 Week Expiration
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v2/auth/login", auto_error=False)
-
-
-def verify_password(plain_password, hashed_password):
-    return CryptContextRef.verify(plain_password, hashed_password)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def get_password_hash(password):
-    return CryptContextRef.hash(password)
+def hash_password(password: str) -> str:
+    """Hash raw password before storing in DB."""
+    return pwd_context.hash(password)
 
 
-def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password against stored hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Generate JWT Access Token for authenticated users."""
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
-    else:
-        expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=60)
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    if not token:
-        return {"sub": "guest_user"}
+def decode_access_token(token: str) -> Optional[dict]:
+    """Decode and validate incoming JWT Token."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            return {"sub": "guest_user"}
         return payload
-    except JWTError:
-        return {"sub": "guest_user"}
+    except jwt.PyJWTError:
+        return None

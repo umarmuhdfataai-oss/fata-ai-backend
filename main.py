@@ -1,11 +1,16 @@
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
-from core.routers import chat
-from core.database import connect_to_mongo, close_mongo_connection
+from core.database import close_mongo_connection, connect_to_mongo
+from core.routers.auth import router as auth_router
+from core.routers.chat import limiter
+from core.routers.chat import router as chat_router
 
 
 @asynccontextmanager
@@ -17,11 +22,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Fata AI Ultra Core API",
-    description="Engine na Fata AI mai sarrafa Rubutu, Binciken Intanet, Kera Hotuna (Imagen 3/Flux), da Aika Muryar Sauti (Voice TTS).",
+    description="Engine na Fata AI mai sarrafa Rubutu, Binciken Intanet, Kera Hotuna (Flux), da Aika Muryar Sauti (Voice TTS).",
     version="3.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
+# Tsaron Yawan Saƙo (Rate Limiter Setup)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Tsarin CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -30,8 +40,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# AN CIRE PREFIX DOMIN YAYI DAIDE DA INDEX.HTML (/chat/stream)
-app.include_router(chat.router)
+# Sanya Routers
+app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 @app.get("/api/health", tags=["Health Check"])
@@ -40,12 +51,14 @@ async def health_check():
         "status": "Online",
         "system": "Fata AI Ultra Core Engine",
         "features": [
-            "Llama 3.3 Chat & AI Tutor", 
-            "Flux Image Generation", 
-            "Voice Synthesis (TTS)"
+            "Qwen / Llama 3.3 Chat & AI Tutor",
+            "Flux Image Generation",
+            "Voice Synthesis (Whisper & TTS)",
+            "Code Interpreter Engine",
+            "PDF Document Analysis",
         ],
         "year": "2026",
-        "message": "Fata AI Backend yana aiki lami lafiya!"
+        "message": "Fata AI Backend yana aiki lami lafiya!",
     }
 
 
@@ -56,10 +69,11 @@ async def serve_frontend():
         return FileResponse("index.html")
     return {
         "status": "Online",
-        "message": "Fata AI Backend yana aiki lami lafiya."
+        "message": "Fata AI Backend yana aiki lami lafiya.",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
